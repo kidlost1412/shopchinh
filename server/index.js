@@ -21,7 +21,7 @@ const dataProcessor = new DataProcessor();
 const financeProcessor = new TikTokFinanceProcessor();
 const rutveProcessor = new RutveProcessor(sheetsService);
 const financeOrderProcessor = new FinanceOrderProcessor();
-const targetStorage = new TargetStorage();
+const targetStorage = new TargetStorage(sheetsService);
 
 // Cache for sheet data
 let cachedData = null;
@@ -253,7 +253,7 @@ app.get('/api/analytics/status-distribution', async (req, res) => {
 // Get current monthly target
 app.get('/api/target', async (req, res) => {
   try {
-    const targetData = targetStorage.getTarget();
+    const targetData = await targetStorage.getTarget(); // Now an async function
     res.json({
       success: true,
       data: targetData
@@ -279,7 +279,7 @@ app.post('/api/target', async (req, res) => {
       });
     }
     
-    const targetData = targetStorage.setTarget(monthlyTarget, 'user');
+    const targetData = await targetStorage.setTarget(monthlyTarget, 'user'); // Now an async function
     
     res.json({
       success: true,

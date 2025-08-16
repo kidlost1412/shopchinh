@@ -21,7 +21,7 @@ class GoogleSheetsService {
 
       this.auth = new google.auth.GoogleAuth({
         credentials,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+                scopes: ['https://www.googleapis.com/auth/spreadsheets'], // Read and write permissions
       });
 
       this.sheets = google.sheets({ version: 'v4', auth: this.auth });
@@ -90,6 +90,31 @@ class GoogleSheetsService {
       };
     } catch (error) {
       console.error('Error fetching sheet info:', error);
+      throw error;
+    }
+  }
+
+  async updateCellValue(spreadsheetId, range, value) {
+    try {
+      if (!this.sheets) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          throw new Error('Failed to initialize Google Sheets service');
+        }
+      }
+
+      const response = await this.sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [[value]],
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error updating cell value:', error);
       throw error;
     }
   }
