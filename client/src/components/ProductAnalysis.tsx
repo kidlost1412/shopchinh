@@ -9,6 +9,7 @@ interface ProductData {
   totalQuantity: number;
   totalRevenue: number;
   latestDeliveryDate: string;
+  notesSummary?: string; // Make it optional to match backend data
 }
 
 interface ProductAnalysisProps {
@@ -32,12 +33,13 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
   const fetchProductAnalysis = async () => {
     try {
       setLoading(true);
-      const data = await apiService.getProductAnalysis({ 
-        startDate, 
-        endDate,
-        countOnlyShippedOrders 
-      });
-      setProducts(data);
+             const data = await apiService.getProductAnalysis({ 
+         startDate, 
+         endDate,
+         countOnlyShippedOrders 
+       });
+
+       setProducts(data);
       setTotalPages(Math.ceil(data.length / ITEMS_PER_PAGE));
       setCurrentPage(1);
     } catch (error) {
@@ -86,12 +88,13 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
 
   // Export to Excel
   const handleExport = () => {
-    const exportData = products.map(product => ({
-      'Tên sản phẩm': product.productName,
-      'Tổng số lượng': product.totalQuantity,
-      'Tổng COD': product.totalRevenue,
-      'Ngày giao hàng gần nhất': formatDate(product.latestDeliveryDate)
-    }));
+         const exportData = products.map(product => ({
+       'Tên sản phẩm': product.productName,
+       'Tổng số lượng': product.totalQuantity,
+       'Tổng COD': product.totalRevenue,
+       'Ghi chú': product.notesSummary || '-',
+       'Ngày giao hàng gần nhất': formatDate(product.latestDeliveryDate)
+     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -181,14 +184,15 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
         {/* Products Table */}
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Tên sản phẩm</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-700">Tổng số lượng</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-700">Tổng COD</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-700">Ngày giao hàng</th>
-              </tr>
-            </thead>
+                         <thead>
+               <tr className="border-b border-gray-200">
+                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Tên sản phẩm</th>
+                 <th className="text-center py-3 px-4 font-semibold text-gray-700">Tổng số lượng</th>
+                 <th className="text-center py-3 px-4 font-semibold text-gray-700">Tổng COD</th>
+                 <th className="text-center py-3 px-4 font-semibold text-gray-700">Ghi chú</th>
+                 <th className="text-center py-3 px-4 font-semibold text-gray-700">Ngày giao hàng</th>
+               </tr>
+             </thead>
             <tbody>
               {getPaginatedProducts().map((product, index) => (
                 <tr 
@@ -213,16 +217,32 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
                       {product.totalQuantity.toLocaleString('vi-VN')}
                     </span>
                   </td>
-                  <td className="text-center py-3 px-4">
-                    <span className="text-green-600 font-semibold">
-                      {formatCurrency(product.totalRevenue)}
-                    </span>
-                  </td>
-                  <td className="text-center py-3 px-4">
-                    <span className="text-gray-600 text-sm">
-                      {formatDate(product.latestDeliveryDate)}
-                    </span>
-                  </td>
+                                     <td className="text-center py-3 px-4">
+                     <span className="text-green-600 font-semibold">
+                       {formatCurrency(product.totalRevenue)}
+                     </span>
+                   </td>
+                   <td className="text-center py-3 px-4">
+                     {product.notesSummary ? (
+                       <div className="group relative">
+                         <span className="text-gray-600 text-sm font-medium max-w-xs truncate block bg-yellow-50 px-2 py-1 rounded" title={product.notesSummary}>
+                           {product.notesSummary}
+                         </span>
+                         {/* Tooltip for full notes */}
+                         <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10 max-w-md">
+                           {product.notesSummary}
+                           <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                         </div>
+                       </div>
+                     ) : (
+                       <span className="text-gray-400 text-sm">-</span>
+                     )}
+                   </td>
+                   <td className="text-center py-3 px-4">
+                     <span className="text-gray-600 text-sm">
+                       {formatDate(product.latestDeliveryDate)}
+                     </span>
+                   </td>
                 </tr>
               ))}
             </tbody>

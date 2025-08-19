@@ -72,6 +72,12 @@ class DataProcessor {
       const result = this.findBestColumnMatch(headers, expectedName, key);
       
       if (result.index !== -1) {
+        // Validate index is within bounds
+        if (result.index >= headers.length) {
+          this.columnWarnings.push(`❌ Lỗi nghiêm trọng: Cột "${expectedName}" map vào index ${result.index} vượt quá số cột thực tế (${headers.length})`);
+          continue; // Skip this mapping
+        }
+        
         this.columnMapping[key] = result.index;
         
         // Add warning if not exact match
@@ -98,6 +104,8 @@ class DataProcessor {
     
     // Log results with confidence levels
     console.log('[DataProcessor] Advanced Column Mapping Result:');
+    
+
     Object.entries(this.columnMapping).forEach(([key, index]) => {
       const confidence = this.calculateMatchConfidence(headers[index], this.expectedColumns[key]);
       console.log(`  ${key}: "${headers[index]}" (index: ${index}, confidence: ${(confidence * 100).toFixed(1)}%)`);
@@ -346,7 +354,8 @@ class DataProcessor {
           actualFee9: this.parseNumber(row[this.columnMapping.ACTUAL_FEE_9]) || 0,
           xtraFee: this.parseNumber(row[this.columnMapping.XTRA_FEE]) || 0,
           flashSaleFee: this.parseNumber(row[this.columnMapping.FLASH_SALE_FEE]) || 0,
-          notes: row[this.columnMapping.NOTES] || '',
+          notes: (this.columnMapping.NOTES !== undefined && this.columnMapping.NOTES < row.length) ? row[this.columnMapping.NOTES] || '' : '',
+          tags: (this.columnMapping.TAGS !== undefined && this.columnMapping.TAGS < row.length) ? row[this.columnMapping.TAGS] || '' : '',
           tax: this.parseNumber(row[this.columnMapping.TAX]) || 0,
           tiktokSubsidy: this.parseNumber(row[this.columnMapping.TIKTOK_SUBSIDY]) || 0,
           products: [{
@@ -355,9 +364,10 @@ class DataProcessor {
             price: this.parseNumber(row[this.columnMapping.UNIT_PRICE]) || 0,
             discount: this.parseNumber(row[this.columnMapping.DISCOUNT]) || 0,
             image: row[this.columnMapping.PRODUCT_IMAGE] || '',
-            revenue: revenueForStatusCard // Use same logic as order revenue
+            revenue: revenueForStatusCard, // Use same logic as order revenue
+            notes: (this.columnMapping.NOTES !== undefined && this.columnMapping.NOTES < row.length) ? row[this.columnMapping.NOTES] || '' : ''
           }],
-          notes: row[this.columnMapping.NOTES] || row[this.columnMapping.TAGS] || ''
+          notes: (this.columnMapping.NOTES !== undefined && this.columnMapping.NOTES < row.length) ? row[this.columnMapping.NOTES] || '' : ''
         };
       } else if (currentOrder && row[this.columnMapping.PRODUCT_NAME]) {
         // Additional product for current order
@@ -386,7 +396,8 @@ class DataProcessor {
           price: this.parseNumber(row[this.columnMapping.UNIT_PRICE]) || 0,
           discount: this.parseNumber(row[this.columnMapping.DISCOUNT]) || 0,
           image: row[this.columnMapping.PRODUCT_IMAGE] || '',
-          revenue: productRevenue
+          revenue: productRevenue,
+          notes: (this.columnMapping.NOTES !== undefined && this.columnMapping.NOTES < row.length) ? row[this.columnMapping.NOTES] || '' : ''
         });
         
         // Add revenue from additional products (only if it's not zero)
@@ -418,6 +429,8 @@ class DataProcessor {
     const number = parseFloat(cleaned);
     return isNaN(number) ? 0 : number;
   }
+
+
 
   // Parse Vietnamese date format (DD/MM/YYYY or DD/MM/YYYY HH:mm)
   parseDate(dateStr) {
@@ -620,6 +633,10 @@ class DataProcessor {
             }
           }
           
+          // CRITICAL FIX: Each product should only get notes from its own row
+          // NOT from the order level - only use product-specific notes
+          const productNote = product.notes || '';
+          
           if (productMap.has(productName)) {
             const existing = productMap.get(productName);
             existing.totalQuantity += quantity;
@@ -628,13 +645,24 @@ class DataProcessor {
             if (deliveryDate > existing.latestDeliveryDate) {
               existing.latestDeliveryDate = deliveryDate;
             }
+            
+            // Only add note if this specific product has one
+            if (productNote && productNote.trim() !== '' && productNote !== 'null' && productNote !== 'undefined') {
+              existing.notesStats.set(productNote, (existing.notesStats.get(productNote) || 0) + 1);
+            }
           } else {
             productMap.set(productName, {
               productName,
               totalQuantity: quantity,
               totalRevenue: revenue,
-              latestDeliveryDate: deliveryDate
+              latestDeliveryDate: deliveryDate,
+              notesStats: new Map() // Initialize notes tracking
             });
+            
+            // Only add note if this specific product has one
+            if (productNote && productNote.trim() !== '' && productNote !== 'null' && productNote !== 'undefined') {
+              productMap.get(productName).notesStats.set(productNote, 1);
+            }
           }
         });
       }
@@ -642,6 +670,17 @@ class DataProcessor {
     
     // Convert to array and sort by total quantity (descending)
     const productAnalysis = Array.from(productMap.values())
+      .map(product => {
+        // Format notes stats into readable string
+        const notesArray = Array.from(product.notesStats.entries())
+          .map(([note, count]) => `${note} (${count})`)
+          .join(', ');
+        
+        return {
+          ...product,
+          notesSummary: notesArray || '' // Empty string instead of 'Không có ghi chú'
+        };
+      })
       .sort((a, b) => b.totalQuantity - a.totalQuantity);
     
     return productAnalysis;
@@ -662,6 +701,8 @@ class DataProcessor {
                 return; // Bỏ qua đơn hàng này
               }
             }
+            
+
             
             productOrders.push({
               id: order.id,

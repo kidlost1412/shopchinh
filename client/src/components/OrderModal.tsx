@@ -44,7 +44,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, isOpen = true, onClose }
             <InfoItem label="Tỉnh/Thành phố" value={order.province || 'N/A'} icon={<FiMapPin />} />
             <InfoItem label="Ngày tạo đơn" value={formatDate(order.createDate)} icon={<FiCalendar />} />
             <InfoItem label="Ngày giao hàng" value={formatDate(order.deliveryDate)} icon={<FiCalendar />} />
-            <InfoItem label="Ghi chú" value={order.notes || 'Không có'} icon={<FiTag />} />
+            <InfoItem label="Ghi chú" value={order.notes || ''} icon={<FiTag />} />
           </div>
         </section>
 

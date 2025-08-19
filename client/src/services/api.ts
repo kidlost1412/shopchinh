@@ -326,6 +326,8 @@ export const apiService = {
       throw new Error(response.data.error || 'Failed to fetch product analysis');
     }
     
+
+    
     return response.data.data;
   },
 

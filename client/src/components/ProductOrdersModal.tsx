@@ -95,7 +95,7 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
              'Ngày giao hàng': formatDate(order.deliveryDate),
        'Ngày tạo': formatDate(order.createDate),
        'Sản phẩm': order.productName,
-       'Ghi chú': order.notes || 'Không có ghi chú'
+       'Ghi chú': order.notes || ''
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -269,9 +269,13 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
                           </span>
                         </td>
                         <td className="text-center py-3 px-4">
-                          <span className="text-gray-600 text-sm font-medium max-w-xs truncate block" title={order.notes || 'Không có ghi chú'}>
-                            {order.notes || 'Không có ghi chú'}
-                          </span>
+                          {order.notes ? (
+                            <span className="text-gray-600 text-sm font-medium max-w-xs truncate block bg-yellow-50 px-2 py-1 rounded" title={order.notes}>
+                              {order.notes}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
                         </td>
                     </tr>
                   ))}

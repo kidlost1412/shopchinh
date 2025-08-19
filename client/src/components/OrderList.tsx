@@ -134,7 +134,7 @@ const OrderList: React.FC<OrderListProps> = ({
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-xs text-gray-600 truncate max-w-32">
-                      {order.notes || 'Không có'}
+                      {order.notes || ''}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -184,7 +184,7 @@ const OrderList: React.FC<OrderListProps> = ({
                 </div>
                 <div>
                   <span className="text-gray-500">Ghi chú:</span>
-                  <div className="font-medium text-xs">{order.notes || 'Không có'}</div>
+                  <div className="font-medium text-xs">{order.notes || ''}</div>
                 </div>
               </div>
               
