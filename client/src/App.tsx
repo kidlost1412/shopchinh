@@ -6,6 +6,7 @@ import Charts from './components/Charts';
 import Button from './components/ui/Button';
 import FinanceReport from './pages/FinanceReport';
 import AffDashboard from './pages/AffDashboard';
+import ProductAnalysis from './components/ProductAnalysis';
 import { DashboardMetrics, Order, StatusKey } from './types';
 import { exportToExcel } from './utils';
 import DatePicker, { registerLocale } from 'react-datepicker';
@@ -724,6 +725,11 @@ function App() {
               statusData={statusData}
               loading={loading}
             />
+          </div>
+
+          {/* Product Analysis Section - NEW FEATURE */}
+          <div className="w-full">
+            <ProductAnalysis startDate={dateRange.startDate} endDate={dateRange.endDate} />
           </div>
 
           {/* Advanced Orders List - Shows when status card is clicked */}

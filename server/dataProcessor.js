@@ -599,6 +599,89 @@ class DataProcessor {
     return Object.values(distribution);
   }
 
+  // Generate product analysis data - NEW FEATURE
+  generateProductAnalysis(orders, countOnlyShippedOrders = false) {
+    const productMap = new Map();
+    
+    orders.forEach(order => {
+      // Process each product in the order
+      if (order.products && Array.isArray(order.products)) {
+        order.products.forEach(product => {
+          const productName = product.name || 'Không xác định';
+          const quantity = product.quantity || 0;
+          const revenue = product.revenue || 0;
+          const deliveryDate = order.deliveryDate || order.createDate || '';
+          
+          // Nếu chỉ đếm đơn đã gửi hàng và đang đóng hàng
+          if (countOnlyShippedOrders) {
+            const status = order.status.trim();
+            if (!['Đã gửi hàng', 'Đang đóng hàng'].includes(status)) {
+              return; // Bỏ qua đơn hàng này
+            }
+          }
+          
+          if (productMap.has(productName)) {
+            const existing = productMap.get(productName);
+            existing.totalQuantity += quantity;
+            existing.totalRevenue += revenue;
+            // Keep the most recent delivery date
+            if (deliveryDate > existing.latestDeliveryDate) {
+              existing.latestDeliveryDate = deliveryDate;
+            }
+          } else {
+            productMap.set(productName, {
+              productName,
+              totalQuantity: quantity,
+              totalRevenue: revenue,
+              latestDeliveryDate: deliveryDate
+            });
+          }
+        });
+      }
+    });
+    
+    // Convert to array and sort by total quantity (descending)
+    const productAnalysis = Array.from(productMap.values())
+      .sort((a, b) => b.totalQuantity - a.totalQuantity);
+    
+    return productAnalysis;
+  }
+
+  // Get product orders for detailed view - NEW FEATURE
+  getProductOrders(orders, productName, countOnlyShippedOrders = false) {
+    const productOrders = [];
+    
+    orders.forEach(order => {
+      if (order.products && Array.isArray(order.products)) {
+        order.products.forEach(product => {
+          if (product.name === productName) {
+            // Nếu chỉ đếm đơn đã gửi hàng và đang đóng hàng
+            if (countOnlyShippedOrders) {
+              const status = order.status.trim();
+              if (!['Đã gửi hàng', 'Đang đóng hàng'].includes(status)) {
+                return; // Bỏ qua đơn hàng này
+              }
+            }
+            
+            productOrders.push({
+              id: order.id,
+              waybillCode: order.waybillCode,
+              status: order.status,
+              quantity: product.quantity,
+              revenue: product.revenue,
+              deliveryDate: order.deliveryDate,
+              createDate: order.createDate,
+              productName: product.name,
+              notes: order.notes || '' // Add notes field
+            });
+          }
+        });
+      }
+    });
+    
+    return productOrders;
+  }
+
   // Get column warnings for API response
   getColumnWarnings() {
     return this.columnWarnings;

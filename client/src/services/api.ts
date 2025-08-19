@@ -303,6 +303,51 @@ export const apiService = {
     }
     
     return response.data.data;
+  },
+
+  // =============================================================================
+  // PRODUCT ANALYSIS API ENDPOINTS - NEW FEATURE
+  // =============================================================================
+
+  // Get product analysis data
+  async getProductAnalysis(filters?: { 
+    startDate?: string; 
+    endDate?: string;
+    countOnlyShippedOrders?: boolean;
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.countOnlyShippedOrders) params.append('countOnlyShippedOrders', 'true');
+    
+    const response = await api.get<ApiResponse<any>>(`/analytics/products?${params}`);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to fetch product analysis');
+    }
+    
+    return response.data.data;
+  },
+
+  // Get product orders for detailed view
+  async getProductOrders(productName: string, filters?: { 
+    startDate?: string; 
+    endDate?: string;
+    countOnlyShippedOrders?: boolean;
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.countOnlyShippedOrders) params.append('countOnlyShippedOrders', 'true');
+    
+    const encodedProductName = encodeURIComponent(productName);
+    const response = await api.get<ApiResponse<any>>(`/analytics/products/${encodedProductName}/orders?${params}`);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to fetch product orders');
+    }
+    
+    return response.data.data;
   }
 };
 

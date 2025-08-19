@@ -53,7 +53,7 @@ const Charts: React.FC<ChartsProps> = ({ revenueData, statusData, loading = fals
 
   return (
     <>
-      {/* Revenue Trend Chart - Full Width */}
+      {/* Revenue Trend Chart */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/30 shadow-lg">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold text-gray-800 flex items-center space-x-3">

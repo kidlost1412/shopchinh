@@ -287,6 +287,59 @@ app.get('/api/analytics/status-distribution', async (req, res) => {
   }
 });
 
+// Get product analysis data - NEW FEATURE
+app.get('/api/analytics/products', async (req, res) => {
+  try {
+    const { startDate, endDate, countOnlyShippedOrders } = req.query;
+    
+    let orders = await getFreshData();
+    
+    if (startDate || endDate) {
+      orders = dataProcessor.filterByDateRange(orders, startDate, endDate);
+    }
+    
+    const productData = dataProcessor.generateProductAnalysis(orders, countOnlyShippedOrders === 'true');
+    
+    res.json({
+      success: true,
+      data: productData
+    });
+  } catch (error) {
+    console.error('Error getting product analysis:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch product analysis data'
+    });
+  }
+});
+
+// Get product orders for detailed view - NEW FEATURE
+app.get('/api/analytics/products/:productName/orders', async (req, res) => {
+  try {
+    const { productName } = req.params;
+    const { startDate, endDate, countOnlyShippedOrders } = req.query;
+    
+    let orders = await getFreshData();
+    
+    if (startDate || endDate) {
+      orders = dataProcessor.filterByDateRange(orders, startDate, endDate);
+    }
+    
+    const productOrders = dataProcessor.getProductOrders(orders, decodeURIComponent(productName), countOnlyShippedOrders === 'true');
+    
+    res.json({
+      success: true,
+      data: productOrders
+    });
+  } catch (error) {
+    console.error('Error getting product orders:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch product orders data'
+    });
+  }
+});
+
 // Target API endpoints
 // Get current monthly target
 app.get('/api/target', async (req, res) => {
