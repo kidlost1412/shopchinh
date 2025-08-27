@@ -110,6 +110,8 @@ const AffDashboard: React.FC = () => {
   
   // Table and modal state
   const [affTablePage, setAffTablePage] = useState<number>(1);
+  const [affTableLimit, setAffTableLimit] = useState<number>(20); // Items per page
+  const [totalAffRecords, setTotalAffRecords] = useState<number>(0);
   const [selectedAffForModal, setSelectedAffForModal] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [modalOrders, setModalOrders] = useState<any[]>([]);
@@ -122,6 +124,7 @@ const AffDashboard: React.FC = () => {
   const [expandedAff, setExpandedAff] = useState<string | null>(null);
   const [contentAnalysis, setContentAnalysis] = useState<ContentAnalysis[]>([]);
   const [top3Products, setTop3Products] = useState<any[]>([]);
+  const [analysisData, setAnalysisData] = useState<ContentAnalysis[]>([]);
   const [analysisLoading, setAnalysisLoading] = useState<boolean>(false);
 
   // Calculate AFF Date Range - Logic riêng biệt cho AFF
@@ -191,16 +194,17 @@ const AffDashboard: React.FC = () => {
       setAffMetrics(metricsData.metrics);
       setTop3Performers(metricsData.top3Performers || []);
       
-      // Load AFF details for table
+      // Load AFF details for table with pagination
       const detailsData = await apiService.getAffDetails({
         startDate: affDateRange.startDate,
         endDate: affDateRange.endDate,
         page: affTablePage,
-        limit: 20
+        limit: affTableLimit
       });
       
       console.log('[AFF Dashboard] AFF details loaded:', detailsData);
       setAffDetails(detailsData.affDetails || []);
+      setTotalAffRecords(detailsData.totalCount || 0);
       
     } catch (error) {
       console.error('[AFF Dashboard] Error loading AFF data:', error);
@@ -210,7 +214,7 @@ const AffDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [affDateRange, affTablePage]);
+  }, [affDateRange, affTablePage, affTableLimit]); // Include pagination dependencies
 
   // Handle AFF Preset Selection
   const handleAffPresetSelect = (preset: string) => {
@@ -260,6 +264,7 @@ const AffDashboard: React.FC = () => {
   const handleAnalysisClick = async (affName: string) => {
     if (expandedAff === affName) {
       setExpandedAff(null);
+      setAnalysisData([]);
       setContentAnalysis([]);
       setTop3Products([]);
       return;
@@ -269,16 +274,20 @@ const AffDashboard: React.FC = () => {
       setAnalysisLoading(true);
       setExpandedAff(affName);
       
-      const analysisData = await apiService.getAffContentAnalysis(affName, {
+      const response = await apiService.getAffContentAnalysis(affName, {
         startDate: affDateRange.startDate,
         endDate: affDateRange.endDate
       });
       
-      setContentAnalysis(analysisData.contentAnalysis || []);
-      setTop3Products(analysisData.top3Products || []);
+      setAnalysisData(response.contentAnalysis || []);
+      setContentAnalysis(response.contentAnalysis || []);
+      setTop3Products(response.top3Products || []);
       
     } catch (error) {
       console.error('[AFF Dashboard] Error loading analysis:', error);
+      setAnalysisData([]);
+      setContentAnalysis([]);
+      setTop3Products([]);
     } finally {
       setAnalysisLoading(false);
     }
@@ -359,34 +368,34 @@ const AffDashboard: React.FC = () => {
       loadAffData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [affDateRange, affTablePage]);
+  }, [affDateRange, affTablePage, affTableLimit]);
 
   return (
-    <div className="aff-dashboard min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-pink-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-2 md:p-6 lg:p-8">
       {/* AFF Header */}
       <div className="bg-white/80 backdrop-blur-lg border-b border-purple-200/80 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-2xl">🎯</span>
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 md:py-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
+            <div className="flex items-center space-x-3 md:space-x-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-md">
+                <span className="text-white font-bold text-lg md:text-2xl">🎯</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
-                  AFF Performance Dashboard
+                <h1 className="text-lg md:text-2xl font-bold text-gray-800">
+                  TikTok AFF Dashboard
                 </h1>
-                <p className="text-sm text-gray-600">
-                  Quản lý và phân tích hiệu suất Affiliate chi tiết
+                <p className="text-xs md:text-sm text-gray-600">
+                  Báo cáo hiệu suất Affiliate Marketing chi tiết
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
               {/* Display selected date range */}
               {(affDateRange.startDate || affDateRange.endDate) && (
-                <div className="flex items-center space-x-2 bg-purple-50 border border-purple-200 rounded-lg px-4 py-2">
-                  <span className="text-purple-600 font-medium text-sm">📊</span>
-                  <span className="text-purple-800 text-sm font-medium">
+                <div className="flex items-center space-x-2 bg-purple-50 border border-purple-200 rounded-lg px-3 md:px-4 py-2">
+                  <span className="text-purple-600 font-medium text-xs md:text-sm">📊</span>
+                  <span className="text-purple-800 text-xs md:text-sm font-medium">
                     {affDateRange.startDate && affDateRange.endDate
                       ? `${new Date(affDateRange.startDate).toLocaleDateString('vi-VN')} - ${new Date(affDateRange.endDate).toLocaleDateString('vi-VN')}`
                       : affDateRange.startDate
@@ -411,20 +420,20 @@ const AffDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 md:py-8">
         {/* AFF Date Filter Section */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-purple-200/50 shadow-lg mb-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 border border-purple-200/50 shadow-lg">
+          <h2 className="text-base md:text-lg font-semibold text-gray-800 mb-3 md:mb-4 flex items-center">
             <span className="mr-2">⏰</span>
             Chọn khoảng thời gian báo cáo AFF
           </h2>
           
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-2 md:gap-3">
             {AFF_DATE_PRESETS.map((preset) => (
               <button
                 key={preset.label}
                 onClick={() => handleAffPresetSelect(preset.label)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${
+                className={`px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${
                   selectedAffPreset === preset.label
                     ? 'bg-purple-600 text-white shadow-md'
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-300'
@@ -474,15 +483,15 @@ const AffDashboard: React.FC = () => {
           </div>
         ) : affMetrics ? (
           <div className="space-y-8">
-            {/* NEW LAYOUT: 4 Cards Left + 1 Large Right */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Left Column - 4 cards in 2x2 grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Layout for Cards: Mobile-optimized responsive layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-8">
+              {/* Left Column - 4 Status Cards (Mobile: 1 column, Desktop: 2x2 Grid) */}
+              <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6">
                 {/* Card 1: Tổng số đơn AFF */}
-                <div className="bg-white rounded-xl p-5 border border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                      <Users className="w-6 h-6 text-white" />
+                <div className="bg-white rounded-xl p-4 md:p-5 border border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center justify-between mb-3 md:mb-4">
+                    <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 md:w-6 md:h-6 text-white" />
                     </div>
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-blue-500 text-white">
                       {formatNumber(affMetrics.totalOrders.count)} đơn
@@ -685,25 +694,41 @@ const AffDashboard: React.FC = () => {
                   <span className="mr-2">📋</span>
                   Chi Tiết AFF Performance
                 </h2>
-                <div className="text-sm text-gray-600">
-                  Tổng số AFF: <span className="font-bold text-indigo-600">{affDetails.length}</span> người
+                <div className="flex items-center space-x-4">
+                  <div className="text-sm text-gray-600">
+                    Tổng số AFF: <span className="font-bold text-indigo-600">{totalAffRecords}</span> người
+                  </div>
+                  <select 
+                    value={affTableLimit} 
+                    onChange={(e) => {
+                      setAffTableLimit(Number(e.target.value));
+                      setAffTablePage(1); // Reset to first page
+                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  >
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={20}>20 / trang</option>
+                    <option value={100}>100 / trang</option>
+                  </select>
                 </div>
               </div>
               
               {affDetails.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                <>
+                  <div className="overflow-x-auto">
+                  <table className="w-full divide-y divide-gray-200 table-auto">
                     <thead className="bg-gradient-to-r from-purple-50 to-indigo-50">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Tên AFF</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Tổng đơn</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Hoàn thành</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Đang xử lý</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Đã huỷ</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">HH Tự nhiên</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">HH Quảng cáo</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Tổng HH</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Phân tích</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/6">AFF</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/8">Tổng</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/8">Hoàn thành</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/8">Đang xử lý</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/8">Đã huỷ</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/8">HH Tự nhiên</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/8">HH Quảng cáo</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/8">Tổng HH</th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/12">Chi tiết</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -711,68 +736,68 @@ const AffDashboard: React.FC = () => {
                         <React.Fragment key={aff.name}>
                           <tr className="hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-indigo-50/50 transition-all duration-200">
                             {/* Tên AFF */}
-                            <td className="px-6 py-5 whitespace-nowrap">
-                              <div className="font-bold text-gray-900">{aff.name}</div>
+                            <td className="px-3 py-4">
+                              <div className="font-bold text-gray-900 text-sm truncate" title={aff.name}>{aff.name}</div>
                             </td>
                             
                             {/* Tổng đơn */}
-                            <td className="px-6 py-5 whitespace-nowrap">
-                              <div className="cursor-pointer hover:bg-blue-100 rounded-lg p-2 transition-colors"
+                            <td className="px-3 py-4">
+                              <div className="cursor-pointer hover:bg-blue-100 rounded-lg p-1 transition-colors"
                                    onClick={() => handleAffNumberClick(aff.name, 'total')}>
-                                <div className="text-sm font-bold text-blue-600">{formatNumber(aff.totalOrders)}</div>
-                                <div className="text-xs text-gray-500">{formatCurrency(aff.revenue)}</div>
+                                <div className="text-xs font-bold text-blue-600">{formatNumber(aff.totalOrders)}</div>
+                                <div className="text-xs text-gray-500 truncate" title={formatCurrency(aff.revenue)}>{formatCurrency(aff.revenue)}</div>
                               </div>
                             </td>
                             
                             {/* Hoàn thành */}
-                            <td className="px-6 py-5 whitespace-nowrap">
-                              <div className="cursor-pointer hover:bg-green-100 rounded-lg p-2 transition-colors"
+                            <td className="px-3 py-4">
+                              <div className="cursor-pointer hover:bg-green-100 rounded-lg p-1 transition-colors"
                                    onClick={() => handleAffNumberClick(aff.name, 'completed')}>
-                                <div className="text-sm font-bold text-green-600">{formatNumber(aff.completedOrders)}</div>
-                                <div className="text-xs text-gray-500">{formatCurrency(aff.completedRevenue || 0)}</div>
+                                <div className="text-xs font-bold text-green-600">{formatNumber(aff.completedOrders)}</div>
+                                <div className="text-xs text-gray-500">{formatCurrency(aff.revenue)}</div>
                               </div>
                             </td>
                             
                             {/* Đang xử lý */}
-                            <td className="px-6 py-5 whitespace-nowrap">
-                              <div className="cursor-pointer hover:bg-orange-100 rounded-lg p-2 transition-colors"
+                            <td className="px-3 py-4">
+                              <div className="cursor-pointer hover:bg-orange-100 rounded-lg p-1 transition-colors"
                                    onClick={() => handleAffNumberClick(aff.name, 'processing')}>
-                                <div className="text-sm font-bold text-orange-600">{formatNumber(aff.processingOrders)}</div>
-                                <div className="text-xs text-gray-500">{formatCurrency(aff.processingRevenue || 0)}</div>
+                                <div className="text-xs font-bold text-orange-600">{formatNumber(aff.processingOrders)}</div>
+                                <div className="text-xs text-gray-500">{formatCurrency(aff.revenue)}</div>
                               </div>
                             </td>
                             
                             {/* Đã huỷ */}
-                            <td className="px-6 py-5 whitespace-nowrap">
-                              <div className="cursor-pointer hover:bg-red-100 rounded-lg p-2 transition-colors"
+                            <td className="px-3 py-4">
+                              <div className="cursor-pointer hover:bg-red-100 rounded-lg p-1 transition-colors"
                                    onClick={() => handleAffNumberClick(aff.name, 'cancelled')}>
-                                <div className="text-sm font-bold text-red-600">{formatNumber(aff.cancelledOrders)}</div>
-                                <div className="text-xs text-gray-500">{formatCurrency(aff.cancelledRevenue || 0)}</div>
+                                <div className="text-xs font-bold text-red-600">{formatNumber(aff.cancelledOrders)}</div>
+                                <div className="text-xs text-gray-500">{formatCurrency(aff.revenue)}</div>
                               </div>
                             </td>
                             
                             {/* HH Tự nhiên */}
-                            <td className="px-6 py-5 whitespace-nowrap">
-                              <div className="text-base font-bold text-green-700">{formatCurrency(aff.standardCommission)}</div>
+                            <td className="px-3 py-4">
+                              <div className="text-xs font-bold text-green-700">{formatCurrency(aff.standardCommission)}</div>
                             </td>
                             
                             {/* HH Quảng cáo */}
-                            <td className="px-6 py-5 whitespace-nowrap">
-                              <div className="text-base font-bold text-blue-700">{formatCurrency(aff.adCommission)}</div>
+                            <td className="px-3 py-4">
+                              <div className="text-xs font-bold text-blue-700">{formatCurrency(aff.adCommission)}</div>
                             </td>
                             
                             {/* Tổng HH */}
-                            <td className="px-6 py-5 whitespace-nowrap">
-                              <div className="text-base font-bold text-purple-600">{formatCurrency(aff.totalCommission)}</div>
+                            <td className="px-3 py-4">
+                              <div className="text-xs font-bold text-purple-600">{formatCurrency(aff.totalCommission)}</div>
                             </td>
                             
-                            {/* Phân tích */}
-                            <td className="px-6 py-5 whitespace-nowrap">
+                            {/* Chi tiết */}
+                            <td className="px-3 py-4 text-center">
                               <button
                                 onClick={() => handleAnalysisClick(aff.name)}
-                                className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-lg"
+                                className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-lg"
                               >
-                                {expandedAff === aff.name ? <ChevronUp className="w-5 h-5" /> : <BarChart3 className="w-5 h-5" />}
+                                {expandedAff === aff.name ? <ChevronUp className="w-4 h-4" /> : <BarChart3 className="w-4 h-4" />}
                               </button>
                             </td>
                           </tr>
@@ -940,6 +965,35 @@ const AffDashboard: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Pagination Controls */}
+                {totalAffRecords > affTableLimit && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      Hiển thị {((affTablePage - 1) * affTableLimit) + 1} - {Math.min(affTablePage * affTableLimit, totalAffRecords)} trong {totalAffRecords} AFF
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setAffTablePage(p => Math.max(1, p - 1))}
+                        disabled={affTablePage === 1}
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                      >
+                        Trước
+                      </button>
+                      <span className="px-4 py-2 text-sm font-medium text-gray-700">
+                        Trang {affTablePage} / {Math.ceil(totalAffRecords / affTableLimit)}
+                      </span>
+                      <button
+                        onClick={() => setAffTablePage(p => Math.min(Math.ceil(totalAffRecords / affTableLimit), p + 1))}
+                        disabled={affTablePage >= Math.ceil(totalAffRecords / affTableLimit)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                      >
+                        Sau
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-400" />

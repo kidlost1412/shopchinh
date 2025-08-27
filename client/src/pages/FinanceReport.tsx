@@ -660,33 +660,33 @@ const FinanceReport: React.FC = () => {
   );
 
   return (
-    <div className="finance-report min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-2 md:p-6 lg:p-8">
       {/* Inject custom DatePicker styles */}
       <style dangerouslySetInnerHTML={{ __html: datePickerStyles }} />
       {/* Finance Header */}
       <div className="bg-white/80 backdrop-blur-lg border-b border-green-200/80 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-2xl">💰</span>
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 md:py-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
+            <div className="flex items-center space-x-3 md:space-x-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-md">
+                <span className="text-white font-bold text-lg md:text-2xl">💰</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-lg md:text-2xl font-bold text-gray-800">
                   TikTok Finance Report
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs md:text-sm text-gray-600">
                   Báo cáo tài chính chi tiết và phân tích doanh thu
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
               {/* Display selected date range */}
               {(financeDateRange.startDate || financeDateRange.endDate) && (
-                <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
-                  <span className="text-green-600 font-medium text-sm">📊</span>
-                  <span className="text-green-800 text-sm font-medium">
+                <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg px-3 md:px-4 py-2">
+                  <span className="text-green-600 font-medium text-xs md:text-sm">📊</span>
+                  <span className="text-green-800 text-xs md:text-sm font-medium">
                     {financeDateRange.startDate && financeDateRange.endDate
                       ? `${new Date(financeDateRange.startDate).toLocaleDateString('vi-VN')} - ${new Date(financeDateRange.endDate).toLocaleDateString('vi-VN')}`
                       : financeDateRange.startDate
@@ -711,20 +711,20 @@ const FinanceReport: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 md:py-8">
         {/* Finance Date Filter Section */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-green-200/50 shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 border border-green-200/50 shadow-lg">
+          <h2 className="text-base md:text-lg font-semibold text-gray-800 mb-3 md:mb-4 flex items-center">
             <span className="mr-2">⏰</span>
             Chọn khoảng thời gian báo cáo
           </h2>
           
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-2 md:gap-3">
             {FINANCE_DATE_PRESETS.map((preset) => (
               <button
                 key={preset.label}
                 onClick={() => handleFinancePresetSelect(preset.label)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+                className={`px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
                   selectedFinancePreset === preset.label
                     ? 'bg-green-600 text-white shadow-md'
                     : 'bg-white text-gray-700 hover:bg-green-50 border border-green-300'
@@ -775,16 +775,16 @@ const FinanceReport: React.FC = () => {
           </div>
         ) : financeData ? (
           <div className="space-y-8">
-            {/* Finance Summary Cards - Professional 4x2 Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Finance Summary Cards - Mobile Optimized Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {/* Row 1 - Primary Metrics */}
               {/* Tổng Doanh Thu Đã Nhận */}
-              <div className="group relative bg-white rounded-2xl p-6 border border-blue-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-blue-100 rounded-full -translate-y-16 translate-x-16 opacity-50"></div>
+              <div className="group relative bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-blue-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 md:w-32 md:h-32 bg-gradient-to-br from-blue-50 to-blue-100 rounded-full -translate-y-8 translate-x-8 md:-translate-y-16 md:translate-x-16 opacity-50"></div>
                 <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <DollarSign className="w-6 h-6 text-white" />
+                  <div className="flex items-center justify-between mb-3 md:mb-4">
+                    <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <DollarSign className="w-4 h-4 md:w-6 md:h-6 text-white" />
                     </div>
                     <div className="text-right">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
@@ -792,8 +792,8 @@ const FinanceReport: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Tổng Doanh Thu Đã Nhận</h3>
-                  <p className="text-2xl font-bold text-blue-600 mb-2">{formatCurrency(financeData.totalReceivedRevenue)}</p>
+                  <h3 className="text-xs md:text-sm font-semibold text-gray-700 mb-1 md:mb-2">Tổng Doanh Thu Đã Nhận</h3>
+                  <p className="text-lg md:text-2xl font-bold text-blue-600 mb-1 md:mb-2">{formatCurrency(financeData.totalReceivedRevenue)}</p>
                   <div className="w-full bg-blue-100 rounded-full h-1.5">
                     <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-1.5 rounded-full" style={{width: '100%'}}></div>
                   </div>
@@ -801,8 +801,8 @@ const FinanceReport: React.FC = () => {
               </div>
 
               {/* Tổng Chi Phí Sàn */}
-              <div className="group relative bg-white rounded-2xl p-6 border border-red-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-red-50 to-red-100 rounded-full -translate-y-16 translate-x-16 opacity-50"></div>
+              <div className="group relative bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-red-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 md:w-32 md:h-32 bg-gradient-to-br from-red-50 to-red-100 rounded-full -translate-y-8 translate-x-8 md:-translate-y-16 md:translate-x-16 opacity-50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">

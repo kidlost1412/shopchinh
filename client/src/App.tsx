@@ -3,10 +3,13 @@ import StatusCard from './components/StatusCard';
 import OrderList from './components/OrderList';
 import OrderModal from './components/OrderModal';
 import Charts from './components/Charts';
+import MobileCharts from './components/MobileCharts';
 import Button from './components/ui/Button';
 import FinanceReport from './pages/FinanceReport';
 import AffDashboard from './pages/AffDashboard';
 import ProductAnalysis from './components/ProductAnalysis';
+import MobileNavigation from './components/MobileNavigation';
+import MobileHeader from './components/MobileHeader';
 import { DashboardMetrics, Order, StatusKey } from './types';
 import { exportToExcel } from './utils';
 import DatePicker, { registerLocale } from 'react-datepicker';
@@ -427,9 +430,20 @@ function App() {
   }, [selectedStatus, currentPage, searchTerm]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header with Advanced Date Picker */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200/80">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 pb-16 md:pb-0">
+      {/* Mobile Header */}
+      <MobileHeader
+        activeTab={activeTab}
+        dateRange={dateRange}
+        selectedPreset={selectedPreset}
+        onPresetSelect={handlePresetSelect}
+        onDateChange={handleDateChange}
+        showCustomDate={showCustomDate}
+        setShowCustomDate={setShowCustomDate}
+      />
+
+      {/* Desktop Header with Advanced Date Picker */}
+      <header className="hidden md:block sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200/80">
         <div className="w-full mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center space-x-4">
@@ -719,13 +733,20 @@ function App() {
           </div>
 
           {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 gap-8">
             <Charts 
               revenueData={revenueData}
               statusData={statusData}
               loading={loading}
             />
           </div>
+
+          {/* Mobile Charts */}
+          <MobileCharts 
+            revenueData={revenueData}
+            statusData={statusData}
+            loading={loading}
+          />
 
           {/* Product Analysis Section - NEW FEATURE */}
           <div className="w-full">
@@ -793,6 +814,14 @@ function App() {
           )}
         </main>
       )}
+
+      {/* Mobile Navigation */}
+      <MobileNavigation
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        affDataLoading={affDataLoading}
+        affDataPreloaded={affDataPreloaded}
+      />
     </div>
   );
 }

@@ -625,14 +625,12 @@ app.get('/api/aff/details', async (req, res) => {
     
     res.json({
       success: true,
-      data: {
-        affDetails: paginatedDetails,
-        total: affDetails.length,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          totalPages: Math.ceil(affDetails.length / parseInt(limit))
-        }
+      affDetails: paginatedDetails,
+      totalCount: affDetails.length,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(affDetails.length / parseInt(limit))
       },
       meta: {
         lastUpdated: lastAffFetchTime,

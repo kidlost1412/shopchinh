@@ -197,14 +197,15 @@ const StatusCard: React.FC<StatusCardProps> = ({
         </div>
       </div>
 
-      {/* Mobile Version - Compact & Clean */}
+      {/* Mobile Version - Touch Optimized */}
       <div
-        className={`block lg:hidden relative rounded-xl border cursor-pointer transition-all duration-200 ${
+        className={`block lg:hidden relative rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 touch-manipulation ${
           isSelected 
-            ? `${config.borderColor} shadow-lg ${config.bgColor}` 
-            : `border-slate-200 bg-white hover:shadow-md hover:${config.bgColor}`
+            ? `${config.borderColor} shadow-lg ${config.bgColor} ring-2 ring-blue-200` 
+            : `border-slate-200 bg-white hover:shadow-md hover:${config.bgColor} active:shadow-xl`
         }`}
         onClick={onClick}
+        style={{ minHeight: '120px' }}
       >
         <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${config.gradient} rounded-t-xl`}></div>
         

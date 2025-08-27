@@ -247,7 +247,7 @@ export const apiService = {
       throw new Error(response.data.error || 'Failed to fetch AFF details');
     }
     
-    return response.data.data;
+    return response.data;
   },
 
   // Get orders by AFF and status - For popup modals
