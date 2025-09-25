@@ -209,6 +209,30 @@ export const apiService = {
     return this.getOrderDetails(orderId);
   },
 
+  // Get orders by finance summary type (reconciled, unreconciled, etc.)
+  async getOrdersBySummaryType(summaryType: string, filters?: { 
+    startDate?: string; 
+    endDate?: string; 
+    search?: string; 
+    page?: number; 
+    limit?: number 
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    
+    const response = await api.get<ApiResponse<any>>(`/finance/summary-orders/${summaryType}?${params}`);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to fetch orders by summary type');
+    }
+    
+    return response.data.data;
+  },
+
   // =============================================================================
   // AFF API ENDPOINTS - HOÀN TOÀN ĐỘC LẬP
   // =============================================================================

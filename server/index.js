@@ -545,6 +545,55 @@ app.get('/api/finance/orders/:feeType', async (req, res) => {
   }
 });
 
+
+// Get orders by finance summary type (e.g., reconciled, unreconciled)
+app.get('/api/finance/summary-orders/:summaryType', async (req, res) => {
+  try {
+    const { summaryType } = req.params;
+    const { startDate, endDate, search, page = 1, limit = 10 } = req.query;
+    
+    console.log(`\n🔍 [API Finance Summary] Request for summary type: ${summaryType}, page: ${page}, search: "${search}"`);
+    
+    let orders = await getFreshData();
+    
+    // 1. Filter by date range (using the same finance logic)
+    if (startDate || endDate) {
+      orders = financeProcessor.filterOrdersByFinanceDate(orders, startDate, endDate);
+    }
+    
+    // 2. Filter by summary type using the new processor method
+    const filteredOrders = financeOrderProcessor.filterOrdersBySummaryType(orders, summaryType);
+    
+    // 3. Apply search filter
+    let searchedOrders = filteredOrders;
+    if (search) {
+      searchedOrders = financeOrderProcessor.searchOrders(filteredOrders, search);
+    }
+    
+    // 4. Pagination
+    const paginationResult = financeOrderProcessor.paginateOrders(searchedOrders, page, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        orders: paginationResult.orders,
+        total: searchedOrders.length,
+        summaryType: summaryType,
+        pagination: paginationResult.pagination
+      },
+      lastUpdated: lastFetchTime
+    });
+    
+  } catch (error) {
+    console.error(`[API Finance Summary] Error getting orders for summary type ${req.params.summaryType}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch orders by summary type'
+    });
+  }
+});
+
+
 // =============================================================================
 // AFF API ENDPOINTS - HOÀN TOÀN ĐỘC LẬP
 // =============================================================================

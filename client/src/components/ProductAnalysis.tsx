@@ -26,8 +26,7 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [countOnlyShippedOrders, setCountOnlyShippedOrders] = useState(false);
-
-  const ITEMS_PER_PAGE = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Fetch product analysis data
   const fetchProductAnalysis = async () => {
@@ -40,7 +39,7 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
        });
 
        setProducts(data);
-      setTotalPages(Math.ceil(data.length / ITEMS_PER_PAGE));
+      setTotalPages(Math.ceil(data.length / itemsPerPage));
       setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching product analysis:', error);
@@ -76,8 +75,8 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
 
   // Get paginated products
   const getPaginatedProducts = () => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
     return products.slice(startIndex, endIndex);
   };
 
@@ -111,6 +110,14 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
   useEffect(() => {
     fetchProductAnalysis();
   }, [startDate, endDate, countOnlyShippedOrders]);
+
+  // Recalculate total pages when itemsPerPage or products change
+  useEffect(() => {
+    if (products.length > 0) {
+      setTotalPages(Math.ceil(products.length / itemsPerPage));
+      setCurrentPage(1); // Reset to first page
+    }
+  }, [itemsPerPage, products]);
 
   if (loading) {
     return (
@@ -251,14 +258,28 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center mt-6 space-x-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Trước
-            </button>
+          <div className="flex items-center justify-between mt-6">
+            <div>
+              <span className="text-sm text-gray-600 mr-2">Hiển thị:</span>
+              <select 
+                value={itemsPerPage} 
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-center space-x-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
             
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
@@ -282,6 +303,7 @@ const ProductAnalysis: React.FC<ProductAnalysisProps> = ({ startDate, endDate })
               Sau
             </button>
           </div>
+        </div>
         )}
 
         {/* Empty state */}

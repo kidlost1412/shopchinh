@@ -191,6 +191,50 @@ class FinanceOrderProcessor {
       pagination
     };
   }
+
+  // Lọc đơn hàng theo các loại summary card chính
+  filterOrdersBySummaryType(orders, summaryType) {
+    console.log(`\n=== [FinanceOrderProcessor] FILTERING ${orders.length} ORDERS BY SUMMARY: ${summaryType.toUpperCase()} ===`);
+
+    let filteredOrders = [];
+
+    // Chỉ lọc các đơn có trạng thái "Đã nhận" làm cơ sở
+    const receivedOrdersOnly = orders.filter(order => {
+      const status = (order.status || '').trim();
+      return status === 'Đã nhận' || status === 'Đã nhận hàng';
+    });
+
+    switch (summaryType) {
+      // "Tổng doanh thu đã nhận" và "Tổng chi phí sàn" đều dựa trên các đơn đã nhận hàng
+      case 'totalReceived':
+      case 'totalCosts':
+        filteredOrders = receivedOrdersOnly;
+        break;
+      
+      // "Đã đối soát": đơn đã nhận VÀ có tiền thực nhận khác 0
+      case 'reconciled':
+        filteredOrders = receivedOrdersOnly.filter(order => {
+          const actualReceived = parseFloat(order.actualReceived);
+          return !isNaN(actualReceived) && actualReceived !== 0;
+        });
+        break;
+      
+      // "Chưa đối soát": đơn đã nhận VÀ tiền thực nhận là 0 hoặc null/undefined
+      case 'unreconciled':
+        filteredOrders = receivedOrdersOnly.filter(order => {
+          const actualReceived = parseFloat(order.actualReceived);
+          return isNaN(actualReceived) || actualReceived === 0;
+        });
+        break;
+
+      default:
+        console.warn(`[FinanceOrderProcessor] Unknown summaryType: "${summaryType}"`);
+        return [];
+    }
+
+    console.log(`[FinanceOrderProcessor] ✅ Found ${filteredOrders.length} orders for summary type "${summaryType}"`);
+    return filteredOrders;
+  }
 }
 
 module.exports = FinanceOrderProcessor;

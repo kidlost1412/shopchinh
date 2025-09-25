@@ -754,7 +754,7 @@ const AffDashboard: React.FC = () => {
                               <div className="cursor-pointer hover:bg-green-100 rounded-lg p-1 transition-colors"
                                    onClick={() => handleAffNumberClick(aff.name, 'completed')}>
                                 <div className="text-xs font-bold text-green-600">{formatNumber(aff.completedOrders)}</div>
-                                <div className="text-xs text-gray-500">{formatCurrency(aff.revenue)}</div>
+                                <div className="text-xs text-gray-500">{formatCurrency(aff.completedRevenue || 0)}</div>
                               </div>
                             </td>
                             
@@ -763,7 +763,7 @@ const AffDashboard: React.FC = () => {
                               <div className="cursor-pointer hover:bg-orange-100 rounded-lg p-1 transition-colors"
                                    onClick={() => handleAffNumberClick(aff.name, 'processing')}>
                                 <div className="text-xs font-bold text-orange-600">{formatNumber(aff.processingOrders)}</div>
-                                <div className="text-xs text-gray-500">{formatCurrency(aff.revenue)}</div>
+                                <div className="text-xs text-gray-500">{formatCurrency(aff.processingRevenue || 0)}</div>
                               </div>
                             </td>
                             
@@ -772,7 +772,7 @@ const AffDashboard: React.FC = () => {
                               <div className="cursor-pointer hover:bg-red-100 rounded-lg p-1 transition-colors"
                                    onClick={() => handleAffNumberClick(aff.name, 'cancelled')}>
                                 <div className="text-xs font-bold text-red-600">{formatNumber(aff.cancelledOrders)}</div>
-                                <div className="text-xs text-gray-500">{formatCurrency(aff.revenue)}</div>
+                                <div className="text-xs text-gray-500">{formatCurrency(aff.cancelledRevenue || 0)}</div>
                               </div>
                             </td>
                             

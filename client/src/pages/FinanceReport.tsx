@@ -7,6 +7,7 @@ import { Order } from '../types';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { vi } from 'date-fns/locale/vi';
 import 'react-datepicker/dist/react-datepicker.css';
+import FinanceSummaryOrderList from '../components/FinanceSummaryOrderList';
 
 // Custom styles for DatePicker to ensure it's always on top
 const datePickerStyles = `
@@ -126,6 +127,11 @@ const FinanceReport: React.FC = () => {
   const [orderPage, setOrderPage] = useState<number>(1);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // State for the new summary order list
+  const [selectedSummaryType, setSelectedSummaryType] = useState<string | null>(null);
+  const [summaryOrderData, setSummaryOrderData] = useState<any | null>(null);
+  const [summaryOrderLoading, setSummaryOrderLoading] = useState<boolean>(false);
+  
   // Order detail modal state - Only for order details
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
@@ -212,6 +218,32 @@ const FinanceReport: React.FC = () => {
       setLoading(false);
     }
   }, [financeDateRange]);
+
+  // Handle click on summary cards
+  const handleSummaryCardClick = async (summaryType: string) => {
+      if (selectedSummaryType === summaryType) {
+          setSelectedSummaryType(null); // Toggle off if clicked again
+          setSummaryOrderData(null);
+          return;
+      }
+
+      try {
+          setSummaryOrderLoading(true);
+          setSelectedSummaryType(summaryType);
+          const data = await apiService.getOrdersBySummaryType(summaryType, {
+              startDate: financeDateRange.startDate,
+              endDate: financeDateRange.endDate,
+              page: 1,
+              limit: 10,
+          });
+          setSummaryOrderData(data);
+      } catch (error) {
+          console.error(`Error loading orders for summary type ${summaryType}:`, error);
+          setSummaryOrderData(null);
+      } finally {
+          setSummaryOrderLoading(false);
+      }
+  };
 
   // Handle Finance Preset Selection
   const handleFinancePresetSelect = (preset: string) => {
@@ -779,7 +811,7 @@ const FinanceReport: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {/* Row 1 - Primary Metrics */}
               {/* Tổng Doanh Thu Đã Nhận */}
-              <div className="group relative bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-blue-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <button onClick={() => handleSummaryCardClick('totalReceived')} className="group relative bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-blue-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden cursor-pointer text-left">
                 <div className="absolute top-0 right-0 w-20 h-20 md:w-32 md:h-32 bg-gradient-to-br from-blue-50 to-blue-100 rounded-full -translate-y-8 translate-x-8 md:-translate-y-16 md:translate-x-16 opacity-50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3 md:mb-4">
@@ -798,10 +830,10 @@ const FinanceReport: React.FC = () => {
                     <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-1.5 rounded-full" style={{width: '100%'}}></div>
                   </div>
                 </div>
-              </div>
+              </button>
 
               {/* Tổng Chi Phí Sàn */}
-              <div className="group relative bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-red-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <button onClick={() => handleSummaryCardClick('totalCosts')} className="group relative bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-red-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden cursor-pointer text-left">
                 <div className="absolute top-0 right-0 w-20 h-20 md:w-32 md:h-32 bg-gradient-to-br from-red-50 to-red-100 rounded-full -translate-y-8 translate-x-8 md:-translate-y-16 md:translate-x-16 opacity-50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -820,10 +852,10 @@ const FinanceReport: React.FC = () => {
                     <div className="bg-gradient-to-r from-red-500 to-red-600 h-1.5 rounded-full" style={{width: `${Math.min((financeData.totalPlatformCosts / financeData.totalReceivedRevenue) * 100, 100)}%`}}></div>
                   </div>
                 </div>
-              </div>
+              </button>
 
               {/* Đã Đối Soát */}
-              <div className="group relative bg-white rounded-2xl p-6 border border-green-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <button onClick={() => handleSummaryCardClick('reconciled')} className="group relative bg-white rounded-2xl p-6 border border-green-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden cursor-pointer text-left">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-50 to-green-100 rounded-full -translate-y-16 translate-x-16 opacity-50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -842,10 +874,10 @@ const FinanceReport: React.FC = () => {
                     <div className="bg-gradient-to-r from-green-500 to-green-600 h-1.5 rounded-full" style={{width: `${Math.min((financeData.reconciledRevenue / financeData.totalReceivedRevenue) * 100, 100)}%`}}></div>
                   </div>
                 </div>
-              </div>
+              </button>
 
               {/* Chưa Đối Soát */}
-              <div className="group relative bg-white rounded-2xl p-6 border border-orange-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <button onClick={() => handleSummaryCardClick('unreconciled')} className="group relative bg-white rounded-2xl p-6 border border-orange-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden cursor-pointer text-left">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-50 to-orange-100 rounded-full -translate-y-16 translate-x-16 opacity-50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -864,9 +896,25 @@ const FinanceReport: React.FC = () => {
                     <div className="bg-gradient-to-r from-orange-500 to-orange-600 h-1.5 rounded-full" style={{width: `${Math.min((financeData.unreconciledRevenue / financeData.totalReceivedRevenue) * 100, 100)}%`}}></div>
                   </div>
                 </div>
-              </div>
+              </button>
 
             </div>
+
+            {/* Render Summary Order List if a type is selected */}
+            {selectedSummaryType && (
+              summaryOrderLoading ? (
+                <div className="text-center py-10">Đang tải danh sách đơn hàng...</div>
+              ) : summaryOrderData && (
+                <FinanceSummaryOrderList
+                  summaryType={selectedSummaryType}
+                  dateRange={financeDateRange}
+                  onClose={() => setSelectedSummaryType(null)}
+                  onOrderSelect={handleOrderSelect}
+                  initialData={summaryOrderData}
+                />
+              )
+            )}
+
 
             {/* Row 2 - Secondary Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
