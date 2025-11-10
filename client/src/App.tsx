@@ -167,43 +167,13 @@ function App() {
     }
   }, [dateRange]);
 
-  // Load monthly target from API
-  const loadTarget = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/target`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setMonthlyTarget(result.data.monthlyTarget || 0);
-      }
-    } catch (error) {
-      console.error('Error loading target:', error);
-    }
-  }, [API_BASE]);
-
-  // Save monthly target to API
-  const saveTarget = useCallback(async (newTarget: number) => {
-    try {
-      const response = await fetch(`${API_BASE}/target`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ monthlyTarget: newTarget }),
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setMonthlyTarget(newTarget);
-        console.log('Target saved successfully:', result.message);
-      } else {
-        console.error('Failed to save target:', result.error);
-      }
-    } catch (error) {
-      console.error('Error saving target:', error);
-    }
-  }, [API_BASE]);
+  // Save monthly target to localStorage only (mỗi tháng riêng)
+  const saveTarget = (newTarget: number) => {
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    localStorage.setItem(`monthlyTarget_${currentMonth}`, newTarget.toString());
+    setMonthlyTarget(newTarget);
+    console.log(`Target saved for ${currentMonth}:`, newTarget);
+  };
 
   // Load orders with advanced filtering
   const loadOrders = useCallback(async (page = 1) => {
@@ -309,12 +279,47 @@ function App() {
     loadOrders(page);
   };
 
-  // Handle export
+  // Handle export current page
   const handleExport = () => {
     if (orders.length > 0) {
       const timestamp = new Date().toISOString().split('T')[0];
-      exportToExcel(orders, `orders_${timestamp}`);
+      const statusLabel = selectedStatus && selectedStatus !== 'Tổng số đơn' ? `_${selectedStatus}` : '';
+      exportToExcel(orders, `orders${statusLabel}_${timestamp}`);
     }
+  };
+
+  // Handle export all orders
+  const handleExportAll = async () => {
+    try {
+      setOrdersLoading(true);
+      const params = new URLSearchParams();
+      params.append('page', '1');
+      params.append('limit', '999999'); // Get all orders
+      if (selectedStatus && selectedStatus !== 'Tổng số đơn') params.append('status', selectedStatus);
+      if (searchTerm) params.append('search', searchTerm);
+      if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+      if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+
+      const response = await fetch(`${API_BASE}/orders?${params}`);
+      const result = await response.json();
+      
+      if (result.success && result.data.orders.length > 0) {
+        const timestamp = new Date().toISOString().split('T')[0];
+        const statusLabel = selectedStatus && selectedStatus !== 'Tổng số đơn' ? `_${selectedStatus}` : '_all';
+        exportToExcel(result.data.orders, `orders${statusLabel}_${timestamp}`);
+      }
+    } catch (error) {
+      console.error('Error exporting all orders:', error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  // Handle view all orders
+  const handleViewAllOrders = () => {
+    setSelectedStatus('Tổng số đơn');
+    setShowOrderList(true);
+    setCurrentPage(1);
   };
 
   // Load initial data and monthly target
@@ -331,13 +336,6 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Save monthly target to localStorage
-  const saveMonthlyTarget = (target: number) => {
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-    localStorage.setItem(`monthlyTarget_${currentMonth}`, target.toString());
-    setMonthlyTarget(target);
-  };
 
   // Calculate target achievement percentage
   const calculateTargetProgress = (): { percentage: number; achieved: number; remaining: number } => {
@@ -392,11 +390,6 @@ function App() {
       setAffDataLoading(false);
     }
   }, [API_BASE]);
-
-  // Load target on component mount
-  useEffect(() => {
-    loadTarget();
-  }, [loadTarget]);
 
   // Background AFF preloading on app start - INDEPENDENT
   useEffect(() => {
@@ -783,7 +776,15 @@ function App() {
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
                   >
                     <span>📊</span>
-                    <span>Xuất Excel</span>
+                    <span>Xuất trang này</span>
+                  </Button>
+                  <Button
+                    onClick={handleExportAll}
+                    disabled={totalOrders === 0 || ordersLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <span>📦</span>
+                    <span>Xuất tất cả ({totalOrders})</span>
                   </Button>
                   <Button
                     onClick={() => setShowOrderList(false)}
