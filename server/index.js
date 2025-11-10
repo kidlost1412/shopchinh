@@ -361,7 +361,7 @@ app.get('/api/target', async (req, res) => {
 // Set monthly target
 app.post('/api/target', async (req, res) => {
   try {
-    const { monthlyTarget } = req.body;
+    const { monthlyTarget, month } = req.body;
     
     if (monthlyTarget === undefined || monthlyTarget === null) {
       return res.status(400).json({
@@ -370,7 +370,8 @@ app.post('/api/target', async (req, res) => {
       });
     }
     
-    const targetData = await targetStorage.setTarget(monthlyTarget, 'user'); // Now an async function
+    // month parameter is optional, defaults to current month if not provided
+    const targetData = await targetStorage.setTarget(monthlyTarget, month);
     
     res.json({
       success: true,
