@@ -5,9 +5,9 @@ class TargetStorage {
     }
     this.sheetsService = sheetsService;
     this.spreadsheetId = process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID;
-    // Sheet name for storing monthly targets
-    this.sheetName = 'targets';
-    this.targetRange = `${this.sheetName}!A:C`; // Columns: Tháng, Mục tiêu, Cập nhật lúc
+    // Use existing columns in 'rutve' sheet: I (Mục tiêu) and J (Tháng mục tiêu)
+    this.sheetName = 'rutve';
+    this.targetRange = `${this.sheetName}!I:J`; // Columns: I = Mục tiêu, J = Tháng mục tiêu
   }
 
   // Get target for specific month (YYYY-MM format)
@@ -20,7 +20,7 @@ class TargetStorage {
       // If no month specified, use current month
       const targetMonth = month || new Date().toISOString().slice(0, 7); // YYYY-MM
       
-      // Read all data from targets sheet
+      // Read columns I and J from rutve sheet
       const data = await this.sheetsService.getSheetData(this.spreadsheetId, this.targetRange);
       
       if (!data || data.length === 0) {
@@ -28,18 +28,20 @@ class TargetStorage {
         return { monthlyTarget: 0, month: targetMonth, lastUpdated: null };
       }
 
-      // Find row for the specified month (skip header row)
+      // Find row where column J (index 1) matches the target month
+      // Skip header row (index 0)
       for (let i = 1; i < data.length; i++) {
         const row = data[i];
-        if (row[0] === targetMonth) {
-          const monthlyTarget = parseFloat(String(row[1]).replace(/[^0-9.-]+/g, "")) || 0;
-          const lastUpdated = row[2] || null;
+        const rowMonth = row[1] ? String(row[1]).trim() : ''; // Column J (Tháng mục tiêu)
+        
+        if (rowMonth === targetMonth) {
+          const monthlyTarget = parseFloat(String(row[0] || '0').replace(/[^0-9.-]+/g, "")) || 0; // Column I (Mục tiêu)
           
-          console.log(`[TargetStorage] Found target for ${targetMonth}: ${monthlyTarget}`);
+          console.log(`[TargetStorage] Found target for ${targetMonth}: ${monthlyTarget} at row ${i + 1}`);
           return {
             monthlyTarget,
             month: targetMonth,
-            lastUpdated,
+            lastUpdated: new Date().toISOString(),
           };
         }
       }
@@ -63,9 +65,8 @@ class TargetStorage {
     try {
       const targetMonth = month || new Date().toISOString().slice(0, 7); // YYYY-MM
       const valueToSet = parseFloat(monthlyTarget) || 0;
-      const timestamp = new Date().toISOString();
 
-      // Read all data from targets sheet
+      // Read columns I and J from rutve sheet
       const data = await this.sheetsService.getSheetData(this.spreadsheetId, this.targetRange);
       
       let rowIndex = -1;
@@ -73,7 +74,10 @@ class TargetStorage {
       // Find if month already exists (skip header row)
       if (data && data.length > 0) {
         for (let i = 1; i < data.length; i++) {
-          if (data[i][0] === targetMonth) {
+          const row = data[i];
+          const rowMonth = row[1] ? String(row[1]).trim() : ''; // Column J (Tháng mục tiêu)
+          
+          if (rowMonth === targetMonth) {
             rowIndex = i + 1; // +1 because sheets are 1-indexed
             break;
           }
@@ -81,21 +85,21 @@ class TargetStorage {
       }
 
       if (rowIndex > 0) {
-        // Update existing row
-        const updateRange = `${this.sheetName}!B${rowIndex}:C${rowIndex}`;
-        await this.sheetsService.updateRowValues(this.spreadsheetId, updateRange, [[valueToSet, timestamp]]);
-        console.log(`[TargetStorage] Updated target for ${targetMonth} to ${valueToSet}`);
+        // Update existing row - only update column I (Mục tiêu)
+        const updateRange = `${this.sheetName}!I${rowIndex}`;
+        await this.sheetsService.updateCellValue(this.spreadsheetId, updateRange, valueToSet);
+        console.log(`[TargetStorage] Updated target for ${targetMonth} to ${valueToSet} at row ${rowIndex}`);
       } else {
-        // Append new row
-        const appendRange = `${this.sheetName}!A:C`;
-        await this.sheetsService.appendRow(this.spreadsheetId, appendRange, [[targetMonth, valueToSet, timestamp]]);
+        // Append new row with both columns I and J
+        const appendRange = `${this.sheetName}!I:J`;
+        await this.sheetsService.appendRow(this.spreadsheetId, appendRange, [[valueToSet, targetMonth]]);
         console.log(`[TargetStorage] Added new target for ${targetMonth}: ${valueToSet}`);
       }
 
       return {
         monthlyTarget: valueToSet,
         month: targetMonth,
-        lastUpdated: timestamp,
+        lastUpdated: new Date().toISOString(),
       };
     } catch (error) {
       console.error('[TargetStorage] Error saving target to Google Sheet:', error);
