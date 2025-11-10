@@ -167,13 +167,44 @@ function App() {
     }
   }, [dateRange]);
 
-  // Save monthly target to localStorage only (mỗi tháng riêng)
-  const saveTarget = (newTarget: number) => {
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-    localStorage.setItem(`monthlyTarget_${currentMonth}`, newTarget.toString());
-    setMonthlyTarget(newTarget);
-    console.log(`Target saved for ${currentMonth}:`, newTarget);
-  };
+  // Load monthly target from API (Google Sheets)
+  const loadTarget = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/target`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setMonthlyTarget(result.data.monthlyTarget || 0);
+        console.log('[App] Target loaded from Google Sheets:', result.data);
+      }
+    } catch (error) {
+      console.error('[App] Error loading target:', error);
+    }
+  }, [API_BASE]);
+
+  // Save monthly target to API (Google Sheets - mỗi tháng riêng)
+  const saveTarget = useCallback(async (newTarget: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/target`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ monthlyTarget: newTarget }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setMonthlyTarget(newTarget);
+        console.log('[App] Target saved to Google Sheets:', result.data);
+      } else {
+        console.error('[App] Failed to save target:', result.error);
+      }
+    } catch (error) {
+      console.error('[App] Error saving target:', error);
+    }
+  }, [API_BASE]);
 
   // Load orders with advanced filtering
   const loadOrders = useCallback(async (page = 1) => {
@@ -322,18 +353,11 @@ function App() {
     setCurrentPage(1);
   };
 
-  // Load initial data and monthly target
+  // Load initial data
   useEffect(() => {
     // Set default date range to 7 days on initial load using the new format function
     const defaultRange = calculateDateRange('7 ngày');
     setDateRange(defaultRange);
-    
-    // Load monthly target from localStorage
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-    const savedTarget = localStorage.getItem(`monthlyTarget_${currentMonth}`);
-    if (savedTarget) {
-      setMonthlyTarget(parseFloat(savedTarget));
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -390,6 +414,11 @@ function App() {
       setAffDataLoading(false);
     }
   }, [API_BASE]);
+
+  // Load target on component mount
+  useEffect(() => {
+    loadTarget();
+  }, [loadTarget]);
 
   // Background AFF preloading on app start - INDEPENDENT
   useEffect(() => {

@@ -118,6 +118,59 @@ class GoogleSheetsService {
       throw error;
     }
   }
+
+  // Update multiple values in a row
+  async updateRowValues(spreadsheetId, range, values) {
+    try {
+      if (!this.sheets) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          throw new Error('Failed to initialize Google Sheets service');
+        }
+      }
+
+      const response = await this.sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: values, // values should be [[val1, val2, val3]]
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error updating row values:', error);
+      throw error;
+    }
+  }
+
+  // Append a new row to the sheet
+  async appendRow(spreadsheetId, range, values) {
+    try {
+      if (!this.sheets) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          throw new Error('Failed to initialize Google Sheets service');
+        }
+      }
+
+      const response = await this.sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range,
+        valueInputOption: 'USER_ENTERED',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: values, // values should be [[val1, val2, val3]]
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error appending row:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = GoogleSheetsService;
