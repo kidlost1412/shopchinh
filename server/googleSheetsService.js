@@ -171,6 +171,96 @@ class GoogleSheetsService {
       throw error;
     }
   }
+
+  async ensureSheetExists(spreadsheetId, sheetName) {
+    try {
+      if (!this.sheets) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          throw new Error('Failed to initialize Google Sheets service');
+        }
+      }
+
+      const info = await this.getSheetInfo(spreadsheetId);
+      const exists = info.sheets.some(sheet => sheet.title === sheetName);
+      if (!exists) {
+        await this.sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          resource: {
+            requests: [
+              {
+                addSheet: {
+                  properties: {
+                    title: sheetName,
+                  },
+                },
+              },
+            ],
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error ensuring sheet exists:', error);
+      throw error;
+    }
+  }
+
+  async deleteRow(spreadsheetId, sheetName, rowIndex) {
+    try {
+      if (!this.sheets) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          throw new Error('Failed to initialize Google Sheets service');
+        }
+      }
+
+      const info = await this.getSheetInfo(spreadsheetId);
+      const sheet = info.sheets.find(s => s.title === sheetName);
+      if (!sheet) {
+        throw new Error(`Sheet ${sheetName} not found`);
+      }
+
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: {
+          requests: [
+            {
+              deleteDimension: {
+                range: {
+                  sheetId: sheet.sheetId,
+                  dimension: 'ROWS',
+                  startIndex: rowIndex,
+                  endIndex: rowIndex + 1,
+                },
+              },
+            },
+          ],
+        },
+      });
+    } catch (error) {
+      console.error('Error deleting row:', error);
+      throw error;
+    }
+  }
+
+  async clearRange(spreadsheetId, range) {
+    try {
+      if (!this.sheets) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          throw new Error('Failed to initialize Google Sheets service');
+        }
+      }
+
+      await this.sheets.spreadsheets.values.clear({
+        spreadsheetId,
+        range,
+      });
+    } catch (error) {
+      console.error('Error clearing range:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = GoogleSheetsService;

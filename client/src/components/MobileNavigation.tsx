@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface MobileNavigationProps {
-  activeTab: 'dashboard' | 'finance' | 'aff';
-  onTabChange: (tab: 'dashboard' | 'finance' | 'aff') => void;
+  activeTab: 'dashboard' | 'finance' | 'aff' | 'aff_tc';
+  onTabChange: (tab: 'dashboard' | 'finance' | 'aff' | 'aff_tc') => void;
   affDataLoading?: boolean;
   affDataPreloaded?: boolean;
 }
@@ -31,6 +31,12 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       label: 'AFF',
       icon: '🎯',
       color: 'purple'
+    },
+    {
+      id: 'aff_tc' as const,
+      label: 'AFF TC',
+      icon: '🎯',
+      color: 'purple'
     }
   ];
 
@@ -52,6 +58,8 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
         return 'bg-gradient-to-r from-green-600 to-emerald-700';
       case 'aff':
         return 'bg-gradient-to-r from-purple-600 to-indigo-700';
+      case 'aff_tc':
+        return 'bg-gradient-to-r from-fuchsia-600 to-pink-700';
       default:
         return 'bg-gradient-to-r from-gray-600 to-gray-700';
     }

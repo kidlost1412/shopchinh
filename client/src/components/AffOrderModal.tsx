@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiService } from '../services/api';
+import OrderModal from './OrderModal';
+import { Order } from '../types';
 
 interface AffOrder {
   id: string;
@@ -39,6 +41,9 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const [pagination, setPagination] = useState<any>(null);
+  const [orderDetail, setOrderDetail] = useState<Order | null>(null);
+  const [orderDetailLoading, setOrderDetailLoading] = useState<boolean>(false);
+  const [orderDetailError, setOrderDetailError] = useState<string>('');
   
   const modalRef = useRef<HTMLDivElement>(null);
   
@@ -101,7 +106,27 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
       onClose();
     }
   };
-  
+
+  // Load order detail
+  const handleOrderClick = async (orderId: string) => {
+    try {
+      setOrderDetailLoading(true);
+      setOrderDetailError('');
+      const order = await apiService.getOrderDetails(orderId);
+      setOrderDetail(order);
+    } catch (error) {
+      console.error('[AffOrderModal] Error loading order detail:', error);
+      setOrderDetailError('Không thể tải chi tiết đơn hàng. Vui lòng thử lại sau.');
+    } finally {
+      setOrderDetailLoading(false);
+    }
+  };
+
+  const handleCloseOrderDetail = () => {
+    setOrderDetail(null);
+    setOrderDetailError('');
+  };
+
   // Format currency
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('vi-VN', { 
@@ -233,7 +258,15 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
                     
                     return (
                       <tr key={`${order.id}-${index}`} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{order.id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-purple-600">
+                          <button
+                            type="button"
+                            onClick={() => handleOrderClick(order.id)}
+                            className="hover:underline"
+                          >
+                            {order.id}
+                          </button>
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
                           <div className="truncate" title={order.productName}>
                             {order.productName}
@@ -324,6 +357,29 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
           </div>
         )}
       </div>
+
+      {orderDetailLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-10">
+          <div className="flex flex-col items-center space-y-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <span className="text-sm text-gray-700">Đang tải chi tiết đơn hàng...</span>
+          </div>
+        </div>
+      )}
+
+      {orderDetailError && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2 rounded shadow">
+          {orderDetailError}
+        </div>
+      )}
+
+      {orderDetail && (
+        <OrderModal
+          order={orderDetail}
+          onClose={handleCloseOrderDetail}
+          isOpen={!!orderDetail}
+        />
+      )}
     </div>
   );
 };

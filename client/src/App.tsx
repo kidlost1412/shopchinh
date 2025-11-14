@@ -7,6 +7,7 @@ import MobileCharts from './components/MobileCharts';
 import Button from './components/ui/Button';
 import FinanceReport from './pages/FinanceReport';
 import AffDashboard from './pages/AffDashboard';
+import AffTCDashboard from './pages/AffTCDashboard';
 import ProductAnalysis from './components/ProductAnalysis';
 import MobileNavigation from './components/MobileNavigation';
 import MobileHeader from './components/MobileHeader';
@@ -49,8 +50,8 @@ const CustomDateInput = forwardRef<HTMLButtonElement, CustomDateInputProps>(({ v
 CustomDateInput.displayName = 'CustomDateInput';
 
 function App() {
-  // Navigation state - Thêm AFF tab
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'finance' | 'aff'>('dashboard');
+  // Navigation state - Thêm AFF & AFF TC tab
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'finance' | 'aff' | 'aff_tc'>('dashboard');
   
   // Core state management
   const [filteredMetrics, setFilteredMetrics] = useState<DashboardMetrics | null>(null);
@@ -474,12 +475,12 @@ function App() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">
-                  TikTok Shop {activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'finance' ? 'Finance' : 'AFF'}
+                  TikTok Shop {activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'finance' ? 'Finance' : activeTab === 'aff' ? 'AFF' : 'AFF TC'}
                 </h1>
                 <p className="text-sm text-gray-500">
                   {activeTab === 'dashboard' ? 'Quản lý đơn hàng thông minh' : 
                    activeTab === 'finance' ? 'Báo cáo tài chính chi tiết' : 
-                   'Phân tích hiệu suất Affiliate'}
+                   activeTab === 'aff' ? 'Phân tích hiệu suất Affiliate' : 'Doanh số AFF TC'}
                 </p>
               </div>
               
@@ -521,6 +522,16 @@ function App() {
                   {affDataPreloaded && !affDataLoading && (
                     <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full"></span>
                   )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('aff_tc')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'aff_tc'
+                      ? 'bg-white text-pink-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  🎯 AFF TC
                 </button>
               </div>
             </div>
@@ -584,6 +595,8 @@ function App() {
         <FinanceReport />
       ) : activeTab === 'aff' ? (
         <AffDashboard />
+      ) : activeTab === 'aff_tc' ? (
+        <AffTCDashboard />
       ) : (
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
           {/* Column Warnings Alert */}

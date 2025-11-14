@@ -8,6 +8,7 @@ const RutveProcessor = require('./RutveProcessor');
 const FinanceOrderProcessor = require('./FinanceOrderProcessor');
 const DonaffProcessor = require('./DonaffProcessor');
 const TargetStorage = require('./targetStorage');
+const { AffTcStorage } = require('./AffTcStorage');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -24,6 +25,7 @@ const rutveProcessor = new RutveProcessor(sheetsService);
 const financeOrderProcessor = new FinanceOrderProcessor();
 const donaffProcessor = new DonaffProcessor();
 const targetStorage = new TargetStorage(sheetsService);
+const affTcStorage = new AffTcStorage(sheetsService);
 
 // Cache for sheet data
 let cachedData = null;
@@ -616,6 +618,20 @@ app.get('/api/aff/metrics', async (req, res) => {
       console.log(`[AFF API] After date filter: ${filteredOrders.length} orders`);
     }
     
+    // Optional: Filter by specific AFF names provided via query (?affNames=a,b,c or repeated affNames params)
+    const affNamesParam = req.query.affNames;
+    let affNames = [];
+    if (Array.isArray(affNamesParam)) {
+      affNames = affNamesParam.flatMap(v => v.split(',').map(s => s.trim()).filter(Boolean));
+    } else if (typeof affNamesParam === 'string' && affNamesParam.trim() !== '') {
+      affNames = affNamesParam.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    if (affNames.length > 0) {
+      const affSet = new Set(affNames.map(n => n.toLowerCase()));
+      filteredOrders = filteredOrders.filter(order => affSet.has((order.affName || '').toLowerCase()));
+      console.log(`[AFF API] After AFF filter: ${filteredOrders.length} orders for ${affNames.length} affiliates`);
+    }
+    
     // Calculate metrics for 5 cards
     const metrics = donaffProcessor.calculateAffMetrics(filteredOrders);
     
@@ -663,6 +679,20 @@ app.get('/api/aff/details', async (req, res) => {
     let filteredOrders = allAffOrders;
     if (startDate || endDate) {
       filteredOrders = donaffProcessor.filterAffOrdersByDateRange(allAffOrders, startDate, endDate);
+    }
+    
+    // Optional: Filter by specific AFF names provided via query (?affNames=a,b,c or repeated affNames params)
+    const affNamesParam = req.query.affNames;
+    let affNames = [];
+    if (Array.isArray(affNamesParam)) {
+      affNames = affNamesParam.flatMap(v => v.split(',').map(s => s.trim()).filter(Boolean));
+    } else if (typeof affNamesParam === 'string' && affNamesParam.trim() !== '') {
+      affNames = affNamesParam.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    if (affNames.length > 0) {
+      const affSet = new Set(affNames.map(n => n.toLowerCase()));
+      filteredOrders = filteredOrders.filter(order => affSet.has((order.affName || '').toLowerCase()));
+      console.log(`[AFF API] After AFF filter (details): ${filteredOrders.length} orders for ${affNames.length} affiliates`);
     }
     
     // Calculate detailed AFF stats
@@ -829,6 +859,56 @@ app.post('/api/aff/refresh', async (req, res) => {
       success: false,
       error: 'Failed to refresh AFF data',
       details: error.message
+    });
+  }
+});
+
+// AFF TC list management endpoints
+app.get('/api/aff-tc/list', async (req, res) => {
+  try {
+    const data = await affTcStorage.getAffList();
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('[AFF TC API] Error getting list:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch AFF TC list',
+      details: error.message,
+    });
+  }
+});
+
+app.post('/api/aff-tc/list', async (req, res) => {
+  try {
+    const { action, name, names } = req.body || {};
+
+    let result;
+    if (action === 'add' && name) {
+      result = await affTcStorage.addAffName(name);
+    } else if (action === 'remove' && name) {
+      result = await affTcStorage.removeAffName(name);
+    } else if (action === 'set' && Array.isArray(names)) {
+      result = await affTcStorage.setAffList(names);
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request. Provide action (add/remove/set) with required payload.',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('[AFF TC API] Error updating list:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update AFF TC list',
+      details: error.message,
     });
   }
 });

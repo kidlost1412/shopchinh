@@ -6,7 +6,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 registerLocale('vi', vi);
 
 interface MobileHeaderProps {
-  activeTab: 'dashboard' | 'finance' | 'aff';
+  activeTab: 'dashboard' | 'finance' | 'aff' | 'aff_tc';
   // Dashboard specific props
   dateRange?: { startDate: string; endDate: string };
   selectedPreset?: string;
@@ -60,6 +60,14 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
           icon: '🎯',
           gradient: 'from-purple-600 to-indigo-700',
           bgColor: 'bg-purple-50'
+        };
+      case 'aff_tc':
+        return {
+          title: 'TikTok AFF TC',
+          subtitle: 'Doanh số AFF TC',
+          icon: '🎯',
+          gradient: 'from-fuchsia-600 to-pink-700',
+          bgColor: 'bg-pink-50'
         };
       default:
         return {

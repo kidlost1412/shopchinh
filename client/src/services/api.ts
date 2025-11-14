@@ -238,10 +238,15 @@ export const apiService = {
   // =============================================================================
 
   // Get AFF dashboard metrics - Main endpoint for 5 cards + top 3
-  async getAffMetrics(filters?: { startDate?: string; endDate?: string }): Promise<any> {
+  async getAffMetrics(filters?: { startDate?: string; endDate?: string; affNames?: string[] }): Promise<any> {
     const params = new URLSearchParams();
     if (filters?.startDate) params.append('startDate', filters.startDate);
     if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.affNames && Array.isArray(filters.affNames)) {
+      filters.affNames
+        .filter(Boolean)
+        .forEach(name => params.append('affNames', name));
+    }
     
     const response = await api.get<ApiResponse<any>>(`/aff/metrics?${params}`);
     
@@ -257,13 +262,19 @@ export const apiService = {
     startDate?: string; 
     endDate?: string; 
     page?: number; 
-    limit?: number 
+    limit?: number; 
+    affNames?: string[];
   }): Promise<any> {
     const params = new URLSearchParams();
     if (filters?.startDate) params.append('startDate', filters.startDate);
     if (filters?.endDate) params.append('endDate', filters.endDate);
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.affNames && Array.isArray(filters.affNames)) {
+      filters.affNames
+        .filter(Boolean)
+        .forEach(name => params.append('affNames', name));
+    }
     
     const response = await api.get<ApiResponse<any>>(`/aff/details?${params}`);
     
@@ -326,6 +337,59 @@ export const apiService = {
       throw new Error(response.data.error || 'Failed to refresh AFF data');
     }
     
+    return response.data.data;
+  },
+
+  // =============================================================================
+  // AFF TC LIST MANAGEMENT
+  // =============================================================================
+
+  async getAffTcList(): Promise<{ affNames: string[]; lastUpdated?: string | null }> {
+    const response = await api.get<ApiResponse<{ affNames: string[]; lastUpdated?: string | null }>>('/aff-tc/list');
+
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to fetch AFF TC list');
+    }
+
+    return response.data.data;
+  },
+
+  async addAffTcName(name: string): Promise<{ affNames: string[]; lastUpdated?: string | null }> {
+    const response = await api.post<ApiResponse<{ affNames: string[]; lastUpdated?: string | null }>>('/aff-tc/list', {
+      action: 'add',
+      name,
+    });
+
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to add AFF');
+    }
+
+    return response.data.data;
+  },
+
+  async removeAffTcName(name: string): Promise<{ affNames: string[]; lastUpdated?: string | null }> {
+    const response = await api.post<ApiResponse<{ affNames: string[]; lastUpdated?: string | null }>>('/aff-tc/list', {
+      action: 'remove',
+      name,
+    });
+
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to remove AFF');
+    }
+
+    return response.data.data;
+  },
+
+  async setAffTcNames(names: string[]): Promise<{ affNames: string[]; lastUpdated?: string | null }> {
+    const response = await api.post<ApiResponse<{ affNames: string[]; lastUpdated?: string | null }>>('/aff-tc/list', {
+      action: 'set',
+      names,
+    });
+
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to update AFF list');
+    }
+
     return response.data.data;
   },
 
