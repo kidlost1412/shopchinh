@@ -344,11 +344,10 @@ const AffDashboard: React.FC = () => {
       const detailsWs = XLSX.utils.aoa_to_sheet(detailsData);
       XLSX.utils.book_append_sheet(wb, detailsWs, 'Chi tiết AFF');
       
-      // Sheet 3+: Detailed orders for each AFF (top 10 AFFs by revenue)
+      // Sheet 3+: Detailed orders for each AFF (ALL AFFs)
       console.log('[AFF Dashboard] Fetching detailed orders for each AFF...');
       const topAffsByRevenue = affDetails
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 10); // Top 10 AFFs
+        .sort((a, b) => b.revenue - a.revenue); // All AFFs sorted by revenue
       
       for (const aff of topAffsByRevenue) {
         try {

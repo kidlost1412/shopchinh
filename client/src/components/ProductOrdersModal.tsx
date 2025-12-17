@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { formatCurrency, formatDate } from '../utils';
 import * as XLSX from 'xlsx';
+import OrderModal from './OrderModal';
+import { Order } from '../types';
 
 interface ProductData {
   productName: string;
@@ -42,6 +44,32 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [orderDetail, setOrderDetail] = useState<Order | null>(null);
+  const [orderDetailLoading, setOrderDetailLoading] = useState<boolean>(false);
+  const [orderDetailError, setOrderDetailError] = useState<string>('');
+
+  // Handle order ID click to show detail
+  const handleOrderClick = async (orderId: string) => {
+    try {
+      setSelectedOrderId(orderId);
+      setOrderDetailLoading(true);
+      setOrderDetailError('');
+      const detail = await apiService.getOrderDetails(orderId);
+      setOrderDetail(detail);
+    } catch (err) {
+      console.error('[ProductOrdersModal] Error loading order details:', err);
+      setOrderDetailError('Không thể tải chi tiết đơn hàng');
+    } finally {
+      setOrderDetailLoading(false);
+    }
+  };
+
+  const closeOrderDetail = () => {
+    setSelectedOrderId(null);
+    setOrderDetail(null);
+    setOrderDetailError('');
+  };
 
   // Fetch product orders
   const fetchProductOrders = async () => {
@@ -293,6 +321,7 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
                 <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0">
                   <tr className="border-b-2 border-gray-300">
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Mã đơn hàng</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Sản phẩm</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Mã vận đơn</th>
                     <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Trạng thái</th>
                     <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Số lượng</th>
@@ -305,8 +334,16 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
                   {filteredOrders.map((order, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
                       <td className="py-3 px-4">
-                        <span className="font-mono text-sm font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                        <button
+                          onClick={() => handleOrderClick(order.id)}
+                          className="font-mono text-sm font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors cursor-pointer"
+                        >
                           {order.id}
+                        </button>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-xs text-gray-700 font-medium max-w-xs truncate block" title={order.productName}>
+                          {order.productName}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -372,6 +409,15 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Order Detail Modal */}
+      {selectedOrderId && orderDetail && (
+        <OrderModal
+          isOpen={true}
+          onClose={closeOrderDetail}
+          order={orderDetail}
+        />
+      )}
     </div>
   );
 };
