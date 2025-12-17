@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Search, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { apiService } from '../services/api';
 import OrderModal from './OrderModal';
 import { Order } from '../types';
+import * as XLSX from 'xlsx';
 
 interface AffOrder {
   id: string;
@@ -46,6 +47,36 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
   const [orderDetailError, setOrderDetailError] = useState<string>('');
   
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Export to Excel
+  const exportToExcel = () => {
+    if (orders.length === 0) return;
+    
+    const exportData = orders.map((order, index) => {
+      const standardCommission = order.standardCommissionActual > 0 ? order.standardCommissionActual : order.standardCommissionEstimated;
+      const adCommission = order.adCommissionActual > 0 ? order.adCommissionActual : order.adCommissionEstimated;
+      const totalCommission = standardCommission + adCommission;
+      
+      return {
+        'Mã đơn': order.id,
+        'Sản phẩm': order.productName,
+        'Trạng thái': order.status,
+        'Loại nội dung': getContentTypeName(order.contentTypeMapped),
+        'Doanh thu': order.revenue,
+        'HH Tự nhiên': standardCommission,
+        'HH Quảng cáo': adCommission,
+        'Tổng HH': totalCommission,
+        'Ngày tạo': order.createDate
+      };
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Chi tiết đơn hàng');
+    
+    const fileName = `${affName}_${getStatusName(status)}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
   
   // Load orders
   const loadOrders = async () => {
@@ -193,10 +224,10 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
         
         {/* Controls */}
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between mb-4">
             {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <div className="relative flex-1 mr-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
                 value={searchTerm}
@@ -205,6 +236,16 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
+            
+            {/* Export button */}
+            <button
+              onClick={exportToExcel}
+              disabled={orders.length === 0}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed mr-4 transition-colors"
+            >
+              <Download size={18} />
+              <span>Xuất Excel</span>
+            </button>
             
             {/* Page size selector */}
             <div className="flex items-center space-x-2">
@@ -243,6 +284,7 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sản phẩm</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại nội dung</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doanh thu</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HH Tự nhiên</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HH Quảng cáo</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tổng HH</th>
@@ -282,6 +324,7 @@ const AffOrderModal: React.FC<AffOrderModalProps> = ({ isOpen, onClose, affName,
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{getContentTypeName(order.contentTypeMapped)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatCurrency(order.revenue)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{formatCurrency(standardCommission)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">{formatCurrency(adCommission)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-600">{formatCurrency(totalCommission)}</td>

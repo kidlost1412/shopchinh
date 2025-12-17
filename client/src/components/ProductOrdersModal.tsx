@@ -38,8 +38,10 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
   countOnlyShippedOrders = false
 }) => {
   const [orders, setOrders] = useState<ProductOrder[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<ProductOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Fetch product orders
   const fetchProductOrders = async () => {
@@ -52,6 +54,7 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
         countOnlyShippedOrders 
       });
       setOrders(data);
+      setFilteredOrders(data);
     } catch (error) {
       console.error('Error fetching product orders:', error);
       setError('Không thể tải dữ liệu đơn hàng');
@@ -64,6 +67,31 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
   useEffect(() => {
     fetchProductOrders();
   }, [product.productName, startDate, endDate, countOnlyShippedOrders]);
+  
+  // Filter orders based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredOrders(orders);
+      return;
+    }
+    
+    const term = searchTerm.trim().toLowerCase();
+    const filtered = orders.filter(order => {
+      // Search by last 4 digits or full order ID
+      const orderId = order.id.toLowerCase();
+      const waybillCode = (order.waybillCode || '').toLowerCase();
+      
+      // Check if search term matches last 4 digits
+      if (term.length === 4 && orderId.endsWith(term)) {
+        return true;
+      }
+      
+      // Check if search term is contained in order ID or waybill
+      return orderId.includes(term) || waybillCode.includes(term);
+    });
+    
+    setFilteredOrders(filtered);
+  }, [searchTerm, orders]);
 
   // Close modal on ESC key
   useEffect(() => {
@@ -84,9 +112,9 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
     }
   };
 
-    // Export orders to Excel
+  // Export orders to Excel
   const handleExport = () => {
-    const exportData = orders.map(order => ({
+    const exportData = filteredOrders.map(order => ({
       'Mã đơn hàng': order.id,
       'Mã vận đơn': order.waybillCode,
       'Trạng thái': order.status,
@@ -167,27 +195,59 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
           </div>
         </div>
 
-        {/* Summary Stats */}
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div className="grid grid-cols-3 gap-6">
-            <div className="text-center">
+        {/* Summary Stats & Search */}
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="text-center bg-white rounded-lg p-3 shadow-sm">
               <div className="text-2xl font-bold text-blue-600">
-                {orders.length}
+                {filteredOrders.length}
               </div>
-              <div className="text-sm text-gray-600">Tổng đơn hàng</div>
+              <div className="text-xs text-gray-600">Hiển thị / {orders.length} đơn</div>
             </div>
-            <div className="text-center">
+            <div className="text-center bg-white rounded-lg p-3 shadow-sm">
               <div className="text-2xl font-bold text-green-600">
                 {product.totalQuantity.toLocaleString('vi-VN')}
               </div>
-              <div className="text-sm text-gray-600">Tổng số lượng</div>
+              <div className="text-xs text-gray-600">Tổng số lượng</div>
             </div>
-            <div className="text-center">
+            <div className="text-center bg-white rounded-lg p-3 shadow-sm">
               <div className="text-2xl font-bold text-purple-600">
                 {formatCurrency(product.totalRevenue)}
               </div>
-              <div className="text-sm text-gray-600">Tổng doanh thu</div>
+              <div className="text-xs text-gray-600">Tổng doanh thu</div>
             </div>
+            <div className="text-center bg-white rounded-lg p-3 shadow-sm">
+              <div className="text-2xl font-bold text-orange-600">
+                {formatCurrency(filteredOrders.reduce((sum, o) => sum + o.revenue, 0))}
+              </div>
+              <div className="text-xs text-gray-600">Doanh thu lọc</div>
+            </div>
+          </div>
+          
+          {/* Search Box */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Tìm kiếm mã đơn (nhập 4 số cuối hoặc toàn bộ)..."
+              className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
@@ -209,74 +269,80 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
                 Thử lại
               </button>
             </div>
-          ) : orders.length === 0 ? (
+          ) : filteredOrders.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-400 text-6xl mb-4">📋</div>
-              <p className="text-gray-500 text-lg">Không có đơn hàng nào</p>
-              <p className="text-gray-400 text-sm">Hãy kiểm tra bộ lọc ngày tháng</p>
+              <div className="text-gray-400 text-6xl mb-4">{searchTerm ? '🔍' : '📋'}</div>
+              <p className="text-gray-500 text-lg">
+                {searchTerm ? 'Không tìm thấy đơn hàng' : 'Không có đơn hàng nào'}
+              </p>
+              <p className="text-gray-400 text-sm">
+                {searchTerm ? `Không có kết quả cho "${searchTerm}"` : 'Hãy kiểm tra bộ lọc ngày tháng'}
+              </p>
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                  Xóa tìm kiếm
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Mã đơn hàng</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Mã vận đơn</th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Trạng thái</th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Số lượng</th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Doanh thu</th>
-                                                              <th className="text-center py-3 px-4 font-semibold text-gray-700">Ngày giao hàng</th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Sản phẩm</th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Ghi chú</th>
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0">
+                  <tr className="border-b-2 border-gray-300">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Mã đơn hàng</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Mã vận đơn</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Trạng thái</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Số lượng</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Doanh thu</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Ngày giao hàng</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Ghi chú</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((order, index) => (
-                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                  {filteredOrders.map((order, index) => (
+                    <tr key={index} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
                       <td className="py-3 px-4">
-                        <span className="font-mono text-sm text-gray-800">
+                        <span className="font-mono text-sm font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">
                           {order.id}
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="font-mono text-sm text-gray-600">
-                          {order.waybillCode || 'N/A'}
+                        <span className="font-mono text-xs text-gray-600">
+                          {order.waybillCode || '-'}
                         </span>
                       </td>
                       <td className="text-center py-3 px-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                           {order.status}
                         </span>
                       </td>
                       <td className="text-center py-3 px-4">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-semibold">
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
                           {order.quantity.toLocaleString('vi-VN')}
                         </span>
                       </td>
                       <td className="text-center py-3 px-4">
-                        <span className="text-green-600 font-semibold">
+                        <span className="text-green-700 font-bold text-sm">
                           {formatCurrency(order.revenue)}
                         </span>
                       </td>
                       <td className="text-center py-3 px-4">
-                        <span className="text-gray-600 text-sm">
+                        <span className="text-gray-600 text-xs">
                           {formatDate(order.deliveryDate)}
                         </span>
                       </td>
-                                                                      <td className="text-center py-3 px-4">
-                          <span className="text-gray-600 text-sm font-medium">
-                            {product.productName}
+                      <td className="text-center py-3 px-4">
+                        {order.notes ? (
+                          <span className="text-gray-600 text-xs font-medium max-w-xs truncate block bg-yellow-50 px-2 py-1 rounded" title={order.notes}>
+                            {order.notes}
                           </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          {order.notes ? (
-                            <span className="text-gray-600 text-sm font-medium max-w-xs truncate block bg-yellow-50 px-2 py-1 rounded" title={order.notes}>
-                              {order.notes}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-sm">-</span>
-                          )}
-                        </td>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -286,10 +352,16 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Hiển thị {orders.length} đơn hàng
+            <div className="text-sm font-medium">
+              {searchTerm ? (
+                <span className="text-blue-700">
+                  Hiển thị {filteredOrders.length} / {orders.length} đơn hàng
+                </span>
+              ) : (
+                <span className="text-gray-600">Hiển thị {orders.length} đơn hàng</span>
+              )}
             </div>
             <button
               onClick={onClose}

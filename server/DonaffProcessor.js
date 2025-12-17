@@ -582,8 +582,11 @@ class DonaffProcessor {
     orders.forEach(order => {
       const affName = order.affName || 'Unknown';
       const revenue = order.revenue || 0; // DOANH THU từ cột U
-      const standardCommission = order.standardCommissionActual || order.standardCommissionEstimated || 0;
-      const adCommission = order.adCommissionActual || order.adCommissionEstimated || 0;
+      const status = order.statusMapped || 'unknown';
+      
+      // CHỈ TÍNH HOA HỒNG CHO ĐơN KHÔNG BỊ HUỶ
+      const standardCommission = status !== 'cancelled' ? (order.standardCommissionActual || order.standardCommissionEstimated || 0) : 0;
+      const adCommission = status !== 'cancelled' ? (order.adCommissionActual || order.adCommissionEstimated || 0) : 0;
       const totalCommission = standardCommission + adCommission;
       
       if (!affStats[affName]) {
@@ -628,8 +631,10 @@ class DonaffProcessor {
       const affName = order.affName || 'Unknown';
       const status = order.statusMapped || 'unknown';
       const revenue = order.revenue || 0;
-      const standardCommission = order.standardCommissionActual || order.standardCommissionEstimated || 0;
-      const adCommission = order.adCommissionActual || order.adCommissionEstimated || 0;
+      
+      // CHỈ TÍNH HOA HỒNG CHO ĐơN KHÔNG BỊ HUỶ
+      const standardCommission = status !== 'cancelled' ? (order.standardCommissionActual || order.standardCommissionEstimated || 0) : 0;
+      const adCommission = status !== 'cancelled' ? (order.adCommissionActual || order.adCommissionEstimated || 0) : 0;
       const totalCommission = standardCommission + adCommission;
       
       if (!affDetails[affName]) {
@@ -741,7 +746,8 @@ class DonaffProcessor {
   analyzeAffByContent(orders, affName) {
     console.log(`[DonaffProcessor] Analyzing content breakdown for AFF: ${affName}`);
     
-    const affOrders = orders.filter(order => order.affName === affName);
+    // CHỈ PHÂN TÍCH ĐơN KHÔNG BỊ HUỶ
+    const affOrders = orders.filter(order => order.affName === affName && order.statusMapped !== 'cancelled');
     const contentAnalysis = {};
     
     affOrders.forEach(order => {

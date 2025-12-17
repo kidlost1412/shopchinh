@@ -344,12 +344,66 @@ const AffDashboard: React.FC = () => {
       const detailsWs = XLSX.utils.aoa_to_sheet(detailsData);
       XLSX.utils.book_append_sheet(wb, detailsWs, 'Chi tiết AFF');
       
+      // Sheet 3+: Detailed orders for each AFF (top 10 AFFs by revenue)
+      console.log('[AFF Dashboard] Fetching detailed orders for each AFF...');
+      const topAffsByRevenue = affDetails
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10); // Top 10 AFFs
+      
+      for (const aff of topAffsByRevenue) {
+        try {
+          // Fetch all orders for this AFF
+          const ordersResponse = await apiService.getAffOrders(aff.name, 'total', {
+            startDate: affDateRange.startDate,
+            endDate: affDateRange.endDate,
+            page: 1,
+            limit: 10000 // Get all orders
+          });
+          
+          const orders = ordersResponse.orders || [];
+          
+          if (orders.length > 0) {
+            const orderData = [
+              [`CHI TIẾT ĐƠN HÀNG - ${aff.name}`],
+              ['Mã đơn', 'Sản phẩm', 'Trạng thái', 'Loại nội dung', 'Doanh thu', 'HH Tự nhiên', 'HH Quảng cáo', 'Tổng HH', 'Ngày tạo'],
+              ...orders.map((order: any) => {
+                const standardCommission = order.standardCommissionActual > 0 ? order.standardCommissionActual : order.standardCommissionEstimated;
+                const adCommission = order.adCommissionActual > 0 ? order.adCommissionActual : order.adCommissionEstimated;
+                const totalCommission = standardCommission + adCommission;
+                
+                return [
+                  order.id,
+                  order.productName,
+                  order.status,
+                  order.contentType || 'N/A',
+                  order.revenue,
+                  standardCommission,
+                  adCommission,
+                  totalCommission,
+                  order.createDate?.split(' ')[0] || ''
+                ];
+              })
+            ];
+            
+            const orderWs = XLSX.utils.aoa_to_sheet(orderData);
+            // Sheet name max 31 chars
+            const sheetName = `${aff.name.substring(0, 28)}...`.substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, orderWs, sheetName);
+          }
+        } catch (err) {
+          console.error(`[AFF Dashboard] Error fetching orders for ${aff.name}:`, err);
+        }
+      }
+      
       // Export file
       const fileName = `AFF_Report_${affDateRange.startDate}_${affDateRange.endDate}.xlsx`;
       XLSX.writeFile(wb, fileName);
       
+      alert(`Đã xuất báo cáo với ${topAffsByRevenue.length} AFF chi tiết!`);
+      
     } catch (error) {
       console.error('[AFF Dashboard] Error exporting Excel:', error);
+      alert('Lỗi khi xuất Excel: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
