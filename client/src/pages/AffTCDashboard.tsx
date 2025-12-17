@@ -74,6 +74,10 @@ interface AffDetail {
   adCommission: number;
   totalCommission: number;
   revenue: number;
+  livestreamRevenue?: number;
+  videoRevenue?: number;
+  displayRevenue?: number;
+  externalTrafficRevenue?: number;
 }
 
 interface ContentAnalysis {
@@ -321,8 +325,8 @@ const AffTCDashboard: React.FC = () => {
       XLSX.utils.book_append_sheet(wb, summaryWs, 'Tổng quan');
 
       const detailsData = [
-        ['CHI TIẾT AFF TC'],
-        ['Tên AFF', 'Tổng đơn', 'Hoàn thành', 'Đang xử lý', 'Đã huỷ', 'Doanh thu', 'HH Tự nhiên', 'HH Quảng cáo', 'Tổng HH'],
+        ['CHI TIẾT AFF TC PERFORMANCE'],
+        ['Tên AFF TC', 'Tổng đơn', 'Hoàn thành', 'Đang xử lý', 'Đã huỷ', 'Doanh thu', 'Doanh thu Live', 'Doanh thu Video', 'Doanh thu Trưng bày', 'Doanh thu External', 'HH Tự nhiên', 'HH Quảng cáo', 'Tổng HH'],
         ...affDetails.map(aff => [
           aff.name,
           aff.totalOrders,
@@ -330,6 +334,10 @@ const AffTCDashboard: React.FC = () => {
           aff.processingOrders,
           aff.cancelledOrders,
           aff.revenue,
+          aff.livestreamRevenue || 0,
+          aff.videoRevenue || 0,
+          aff.displayRevenue || 0,
+          aff.externalTrafficRevenue || 0,
           aff.standardCommission,
           aff.adCommission,
           aff.totalCommission

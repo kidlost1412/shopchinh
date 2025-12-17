@@ -650,7 +650,12 @@ class DonaffProcessor {
           standardCommission: 0,
           adCommission: 0,
           totalCommission: 0,
-          revenue: 0
+          revenue: 0,
+          // Revenue breakdown by content type
+          livestreamRevenue: 0,
+          videoRevenue: 0,
+          displayRevenue: 0,
+          externalTrafficRevenue: 0
         };
       }
       
@@ -672,6 +677,18 @@ class DonaffProcessor {
       affDetails[affName].standardCommission += standardCommission;
       affDetails[affName].adCommission += adCommission;
       affDetails[affName].totalCommission += totalCommission;
+      
+      // Revenue breakdown by content type
+      const contentTypeMapped = order.contentTypeMapped || 'unknown';
+      if (contentTypeMapped === 'livestream') {
+        affDetails[affName].livestreamRevenue += revenue;
+      } else if (contentTypeMapped === 'video') {
+        affDetails[affName].videoRevenue += revenue;
+      } else if (contentTypeMapped === 'display') {
+        affDetails[affName].displayRevenue += revenue;
+      } else if (contentTypeMapped === 'external_traffic') {
+        affDetails[affName].externalTrafficRevenue += revenue;
+      }
     });
     
     // Convert to array and sort by total commission

@@ -76,6 +76,10 @@ interface AffDetail {
   adCommission: number;
   totalCommission: number;
   revenue: number;
+  livestreamRevenue?: number;
+  videoRevenue?: number;
+  displayRevenue?: number;
+  externalTrafficRevenue?: number;
 }
 
 interface ContentAnalysis {
@@ -330,7 +334,7 @@ const AffDashboard: React.FC = () => {
       // Sheet 2: AFF Details
       const detailsData = [
         ['CHI TIẾT AFF PERFORMANCE'],
-        ['Tên AFF', 'Tổng đơn', 'Hoàn thành', 'Đang xử lý', 'Đã huỷ', 'Doanh thu', 'HH Tự nhiên', 'HH Quảng cáo', 'Tổng HH'],
+        ['Tên AFF', 'Tổng đơn', 'Hoàn thành', 'Đang xử lý', 'Đã huỷ', 'Doanh thu', 'Doanh thu Live', 'Doanh thu Video', 'Doanh thu Trưng bày', 'Doanh thu External', 'HH Tự nhiên', 'HH Quảng cáo', 'Tổng HH'],
         ...affDetails.map(aff => [
           aff.name,
           aff.totalOrders,
@@ -338,6 +342,10 @@ const AffDashboard: React.FC = () => {
           aff.processingOrders,
           aff.cancelledOrders,
           aff.revenue,
+          aff.livestreamRevenue || 0,
+          aff.videoRevenue || 0,
+          aff.displayRevenue || 0,
+          aff.externalTrafficRevenue || 0,
           aff.standardCommission,
           aff.adCommission,
           aff.totalCommission
