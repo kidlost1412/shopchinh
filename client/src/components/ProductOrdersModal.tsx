@@ -105,12 +105,15 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
     
     const term = searchTerm.trim().toLowerCase();
     const filtered = orders.filter(order => {
+      // Null safety: ensure order ID exists
+      if (!order.id) return false;
+      
       // Search by last 4 digits or full order ID
       const orderId = order.id.toLowerCase();
       const waybillCode = (order.waybillCode || '').toLowerCase();
       
       // Check if search term matches last 4 digits
-      if (term.length === 4 && orderId.endsWith(term)) {
+      if (term.length === 4 && orderId.length >= 4 && orderId.endsWith(term)) {
         return true;
       }
       
@@ -142,26 +145,33 @@ const ProductOrdersModal: React.FC<ProductOrdersModalProps> = ({
 
   // Export orders to Excel
   const handleExport = () => {
+    if (filteredOrders.length === 0) {
+      alert('Không có đơn hàng nào để xuất!');
+      return;
+    }
+    
     const exportData = filteredOrders.map(order => ({
-      'Mã đơn hàng': order.id,
-      'Mã vận đơn': order.waybillCode,
-      'Trạng thái': order.status,
-      'Số lượng': order.quantity,
-      'Doanh thu': order.revenue,
-             'Ngày giao hàng': formatDate(order.deliveryDate),
-       'Ngày tạo': formatDate(order.createDate),
-       'Sản phẩm': order.productName,
-       'Ghi chú': order.notes || ''
+      'Mã đơn hàng': order.id || '',
+      'Sản phẩm': order.productName || '',
+      'Mã vận đơn': order.waybillCode || '',
+      'Trạng thái': order.status || '',
+      'Số lượng': order.quantity || 0,
+      'Doanh thu': order.revenue || 0,
+      'Ngày giao hàng': formatDate(order.deliveryDate),
+      'Ngày tạo': formatDate(order.createDate),
+      'Ghi chú': order.notes || ''
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     
-    // Giới hạn tên sheet tối đa 31 ký tự (Excel requirement)
-    const sheetName = `Đơn hàng - ${product.productName.substring(0, 20)}`;
+    // Giới hạn tên sheet tối đa 31 ký tự và loại bỏ ký tự không hợp lệ
+    const invalidChars = /[\[\]\*\/\\\?:]/g;
+    let sheetName = `Đơn hàng - ${product.productName.substring(0, 15)}`;
+    sheetName = sheetName.replace(invalidChars, '-').substring(0, 31);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
     
-    // Tạo tên file ngắn gọn hơn
+    // Tạo tên file an toàn
     const shortProductName = product.productName.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '-');
     const fileName = `don-hang-${shortProductName}-${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);

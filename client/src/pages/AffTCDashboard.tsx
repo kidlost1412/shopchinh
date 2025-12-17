@@ -67,6 +67,9 @@ interface AffDetail {
   completedOrders: number;
   processingOrders: number;
   cancelledOrders: number;
+  completedRevenue?: number;
+  processingRevenue?: number;
+  cancelledRevenue?: number;
   standardCommission: number;
   adCommission: number;
   totalCommission: number;
@@ -376,8 +379,10 @@ const AffTCDashboard: React.FC = () => {
             ];
             
             const orderWs = XLSX.utils.aoa_to_sheet(orderData);
-            // Sheet name max 31 chars
-            const sheetName = `${aff.name.substring(0, 28)}...`.substring(0, 31);
+            // Sheet name max 31 chars, ensure unique names
+            let sheetName = aff.name.substring(0, 28);
+            const invalidChars = /[\[\]\*\/\\\?:]/g;
+            sheetName = sheetName.replace(invalidChars, '-');
             XLSX.utils.book_append_sheet(wb, orderWs, sheetName);
           }
         } catch (err) {
