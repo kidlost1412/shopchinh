@@ -7,6 +7,7 @@ const TikTokFinanceProcessor = require('./TikTokFinanceProcessor');
 const RutveProcessor = require('./RutveProcessor');
 const FinanceOrderProcessor = require('./FinanceOrderProcessor');
 const DonaffProcessor = require('./DonaffProcessor');
+const AffChinhProcessor = require('./AffChinhProcessor');
 const TargetStorage = require('./targetStorage');
 const { AffTcStorage } = require('./AffTcStorage');
 
@@ -24,8 +25,12 @@ const financeProcessor = new TikTokFinanceProcessor();
 const rutveProcessor = new RutveProcessor(sheetsService);
 const financeOrderProcessor = new FinanceOrderProcessor();
 const donaffProcessor = new DonaffProcessor();
+const affChinhProcessor = new AffChinhProcessor();
 const targetStorage = new TargetStorage(sheetsService);
 const affTcStorage = new AffTcStorage(sheetsService);
+
+// AffChính config - tên shop hiển thị như 1 AFF trong dashboard
+const SHOP_NAME = process.env.SHOP_NAME || '';
 
 // Cache for sheet data
 let cachedData = null;
@@ -36,6 +41,10 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let cachedAffData = null;
 let lastAffFetchTime = null;
 const AFF_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Cache for AffChính data
+let cachedAffChinhData = null;
+let lastAffChinhFetchTime = null;
 
 // Helper function to get fresh data
 async function getFreshData() {
@@ -96,6 +105,53 @@ async function getFreshAffData() {
     console.error('[AFF API] Error fetching AFF data:', error);
     throw error;
   }
+}
+
+// Helper function to get AffChính data from Google Sheet
+async function getAffChinhData() {
+  const now = Date.now();
+  
+  if (cachedAffChinhData && lastAffChinhFetchTime && (now - lastAffChinhFetchTime) < AFF_CACHE_DURATION) {
+    return cachedAffChinhData;
+  }
+  
+  // Chỉ load nếu có SHOP_NAME
+  if (!SHOP_NAME) {
+    return [];
+  }
+  
+  try {
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID;
+    if (!spreadsheetId) return [];
+    
+    const affChinhSheetName = 'affchinh';
+    console.log(`[AffChính] Fetching data from Google Sheet: ${affChinhSheetName}, SHOP_NAME: ${SHOP_NAME}`);
+    
+    const rawData = await sheetsService.getAllSheetData(spreadsheetId, affChinhSheetName);
+    const orders = affChinhProcessor.processAffChinhOrders(rawData, SHOP_NAME);
+    
+    cachedAffChinhData = orders;
+    lastAffChinhFetchTime = now;
+    
+    console.log(`[AffChính] Loaded ${orders.length} shop own orders as AFF "${SHOP_NAME}"`);
+    return orders;
+  } catch (error) {
+    console.error('[AffChính] Error loading from Google Sheet:', error.message);
+    return [];
+  }
+}
+
+// Helper: Merge donaff + affchinh orders
+async function getMergedAffData() {
+  const donaffOrders = await getFreshAffData();
+  const affChinhOrders = await getAffChinhData();
+  
+  if (affChinhOrders.length > 0) {
+    console.log(`[AFF API] Merging ${donaffOrders.length} donaff + ${affChinhOrders.length} affchinh orders`);
+    return [...donaffOrders, ...affChinhOrders];
+  }
+  
+  return donaffOrders;
 }
 
 // API Routes
@@ -607,9 +663,9 @@ app.get('/api/aff/metrics', async (req, res) => {
     const { startDate, endDate } = req.query;
     console.log(`[AFF API] Request for AFF metrics: ${startDate} to ${endDate}`);
     
-    // Get ALL AFF orders (không filter)
-    const allAffOrders = await getFreshAffData();
-    console.log(`[AFF API] Retrieved ${allAffOrders.length} AFF orders`);
+    // Get ALL AFF orders (donaff + affchinh merged)
+    const allAffOrders = await getMergedAffData();
+    console.log(`[AFF API] Retrieved ${allAffOrders.length} AFF orders (merged)`);
     
     // Apply date filter if provided
     let filteredOrders = allAffOrders;
@@ -674,8 +730,8 @@ app.get('/api/aff/details', async (req, res) => {
     const { startDate, endDate, page = 1, limit = 1000 } = req.query; // Increased limit to show all AFFs
     console.log(`[AFF API] Request for AFF details: ${startDate} to ${endDate}, page ${page}`);
     
-    // Get filtered AFF orders
-    const allAffOrders = await getFreshAffData();
+    // Get filtered AFF orders (merged donaff + affchinh)
+    const allAffOrders = await getMergedAffData();
     let filteredOrders = allAffOrders;
     if (startDate || endDate) {
       filteredOrders = donaffProcessor.filterAffOrdersByDateRange(allAffOrders, startDate, endDate);
@@ -697,6 +753,18 @@ app.get('/api/aff/details', async (req, res) => {
     
     // Calculate detailed AFF stats
     const affDetails = donaffProcessor.calculateAffDetails(filteredOrders);
+    
+    // SHOP_NAME: override revenue breakdown bằng tỷ lệ 70/25/5 (chỉ tính đơn không huỷ)
+    if (SHOP_NAME) {
+      const shopEntry = affDetails.find(a => a.name === SHOP_NAME);
+      if (shopEntry) {
+        const nonCancelledRevenue = (shopEntry.completedRevenue || 0) + (shopEntry.processingRevenue || 0);
+        shopEntry.livestreamRevenue = Math.round(nonCancelledRevenue * 0.70);
+        shopEntry.videoRevenue = Math.round(nonCancelledRevenue * 0.25);
+        shopEntry.displayRevenue = nonCancelledRevenue - shopEntry.livestreamRevenue - shopEntry.videoRevenue;
+        shopEntry.externalTrafficRevenue = 0;
+      }
+    }
     
     // Pagination
     const startIndex = (parseInt(page) - 1) * parseInt(limit);
@@ -736,8 +804,8 @@ app.get('/api/aff/orders/:affName/:status', async (req, res) => {
     
     console.log(`[AFF API] Request for orders: AFF=${affName}, Status=${status}, Page=${page}`);
     
-    // Get filtered AFF orders
-    const allAffOrders = await getFreshAffData();
+    // Get filtered AFF orders (merged)
+    const allAffOrders = await getMergedAffData();
     let filteredOrders = allAffOrders;
     if (startDate || endDate) {
       filteredOrders = donaffProcessor.filterAffOrdersByDateRange(allAffOrders, startDate, endDate);
@@ -806,18 +874,43 @@ app.get('/api/aff/analysis/:affName', async (req, res) => {
     
     console.log(`[AFF API] Request for content analysis: AFF=${affName}`);
     
-    // Get filtered AFF orders
-    const allAffOrders = await getFreshAffData();
+    // Get filtered AFF orders (merged)
+    const allAffOrders = await getMergedAffData();
     let filteredOrders = allAffOrders;
     if (startDate || endDate) {
       filteredOrders = donaffProcessor.filterAffOrdersByDateRange(allAffOrders, startDate, endDate);
     }
     
     // Analyze content breakdown for this AFF
-    const contentAnalysis = donaffProcessor.analyzeAffByContent(filteredOrders, decodeURIComponent(affName));
+    const decodedAffName = decodeURIComponent(affName);
+    let contentAnalysis;
+    
+    // SHOP_NAME: override content analysis bằng tỷ lệ cố định 70/25/5
+    if (SHOP_NAME && decodedAffName === SHOP_NAME) {
+      const shopOrders = filteredOrders.filter(o => o.affName === decodedAffName && o.statusMapped !== 'cancelled');
+      const totalRevenue = shopOrders.reduce((sum, o) => sum + (o.revenue || 0), 0);
+      const totalCount = shopOrders.length;
+      
+      const livestreamCount = Math.round(totalCount * 0.70);
+      const videoCount = Math.round(totalCount * 0.25);
+      const displayCount = totalCount - livestreamCount - videoCount;
+      
+      const livestreamRevenue = Math.round(totalRevenue * 0.70);
+      const videoRevenue = Math.round(totalRevenue * 0.25);
+      const displayRevenue = totalRevenue - livestreamRevenue - videoRevenue;
+      
+      contentAnalysis = [
+        { type: 'Phát trực tiếp', typeMapped: 'livestream', orderCount: livestreamCount, revenue: livestreamRevenue, commission: 0 },
+        { type: 'Video', typeMapped: 'video', orderCount: videoCount, revenue: videoRevenue, commission: 0 },
+        { type: 'Trưng bày', typeMapped: 'display', orderCount: displayCount, revenue: displayRevenue, commission: 0 }
+      ];
+      console.log(`[AFF API] SHOP_NAME override: ${totalCount} orders, ${totalRevenue} VND → 70/25/5 split`);
+    } else {
+      contentAnalysis = donaffProcessor.analyzeAffByContent(filteredOrders, decodedAffName);
+    }
     
     // Get top 3 products for this AFF
-    const top3Products = donaffProcessor.getTop3Products(filteredOrders, decodeURIComponent(affName));
+    const top3Products = donaffProcessor.getTop3Products(filteredOrders, decodedAffName);
     
     res.json({
       success: true,
@@ -844,8 +937,10 @@ app.post('/api/aff/refresh', async (req, res) => {
   try {
     cachedAffData = null;
     lastAffFetchTime = null;
+    cachedAffChinhData = null;
+    lastAffChinhFetchTime = null;
     
-    const affOrders = await getFreshAffData();
+    const affOrders = await getMergedAffData();
     
     res.json({
       success: true,

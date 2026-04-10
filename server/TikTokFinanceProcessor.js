@@ -186,6 +186,75 @@ class TikTokFinanceProcessor {
     };
   }
 
+  // TÍNH PHÍ ẨN PER-ORDER - Để xác minh chi tiết
+  calculateHiddenFeeOrders(receivedOrders) {
+    console.log('[TikTokFinanceProcessor] Calculating hidden fees per order');
+    
+    const hiddenFeeOrders = [];
+    let totalHiddenFee = 0;
+    
+    for (const order of receivedOrders) {
+      // Chỉ tính cho đơn đã đối soát (có actualReceived)
+      if (!order.actualReceived || order.actualReceived === 0) continue;
+      
+      // Tính tổng phí đã biết cho đơn này
+      const knownFees = Math.abs(parseFloat(order.affFee) || 0) +
+                        Math.abs(parseFloat(order.shippingFee) || 0) +
+                        Math.abs(parseFloat(order.shopShippingFee) || 0) +
+                        Math.abs(parseFloat(order.actualFee9) || 0) +
+                        Math.abs(parseFloat(order.xtraFee) || 0) +
+                        Math.abs(parseFloat(order.flashSaleFee) || 0) +
+                        Math.abs(parseFloat(order.tax) || 0) +
+                        Math.abs(parseFloat(order.orderProcessingFee) || 0) -
+                        Math.abs(parseFloat(order.tiktokSubsidy) || 0);
+      
+      // Doanh thu - phí đã biết = tiền lẽ ra phải nhận
+      const expectedReceived = (order.revenueBeforeFees || 0) - knownFees;
+      // Phí ẩn = tiền lẽ ra nhận - tiền thực nhận
+      const hiddenFee = Math.round((expectedReceived - (order.actualReceived || 0)) * 100) / 100;
+      
+      if (Math.abs(hiddenFee) > 1) { // bỏ qua sai số float < 1đ
+        totalHiddenFee += hiddenFee;
+        
+        hiddenFeeOrders.push({
+          id: order.id,
+          status: order.status,
+          revenueBeforeFees: order.revenueBeforeFees || 0,
+          actualReceived: order.actualReceived || 0,
+          knownFees: Math.round(knownFees * 100) / 100,
+          expectedReceived: Math.round(expectedReceived * 100) / 100,
+          hiddenFee: hiddenFee,
+          // Chi tiết phí đã biết
+          feeBreakdown: {
+            affFee: Math.abs(parseFloat(order.affFee) || 0),
+            shippingFee: Math.abs(parseFloat(order.shippingFee) || 0),
+            shopShippingFee: Math.abs(parseFloat(order.shopShippingFee) || 0),
+            platformFee: Math.abs(parseFloat(order.actualFee9) || 0),
+            xtraFee: Math.abs(parseFloat(order.xtraFee) || 0),
+            flashSaleFee: Math.abs(parseFloat(order.flashSaleFee) || 0),
+            tax: Math.abs(parseFloat(order.tax) || 0),
+            tiktokSubsidy: Math.abs(parseFloat(order.tiktokSubsidy) || 0),
+            orderProcessingFee: Math.abs(parseFloat(order.orderProcessingFee) || 0)
+          },
+          reason: hiddenFee > 0 
+            ? 'Phí VC thực tế + Chiết khấu VC nền tảng không triệt tiêu (codtiktok có cột phí chưa map sang PosSheets)' 
+            : 'TikTok bù thêm tiền (subsidy/reimbursement chưa map)'
+        });
+      }
+    }
+    
+    // Sắp xếp theo phí ẩn lớn nhất
+    hiddenFeeOrders.sort((a, b) => Math.abs(b.hiddenFee) - Math.abs(a.hiddenFee));
+    
+    console.log(`[TikTokFinanceProcessor] Found ${hiddenFeeOrders.length} orders with hidden fees, total: ${Math.round(totalHiddenFee).toLocaleString()} VND`);
+    
+    return {
+      orders: hiddenFeeOrders,
+      totalHiddenFee: Math.round(totalHiddenFee * 100) / 100,
+      count: hiddenFeeOrders.length
+    };
+  }
+
   // HÀM CHÍNH: Generate Finance Report
   generateFinanceReport(allOrders, startDate, endDate, advertisingData = null, withdrawalData = null) {
     console.log(`[TikTokFinanceProcessor] Generating Finance Report`);
@@ -198,7 +267,7 @@ class TikTokFinanceProcessor {
     // 2. Tính tổng doanh thu đã nhận
     const revenueData = this.calculateTotalReceivedRevenue(ordersInPeriod);
     
-    // 3. Tính tổng chi phí sàn
+    // 3. Tính phí đã biết (breakdown từ các cột phí trong PosSheets)
     const costsData = this.calculateTotalPlatformCosts(revenueData.orders);
     
     // 4. Tính số dư TikTok hiện tại (không filter date) - Bao gồm GVM
@@ -209,7 +278,27 @@ class TikTokFinanceProcessor {
     // 5. Tính đã đối soát
     const reconciliationData = this.calculateReconciledOrders(ordersInPeriod);
     
-    // 6. Tiền quảng cáo (có filter date) - Bao gồm GVM
+    // 6. FIX: Tính Tổng Chi Phí Sàn = DT - Đã ĐS - Chưa ĐS (derived)
+    // Đảm bảo 4 thẻ luôn cân bằng: DT - Phí = Đã ĐS + Chưa ĐS
+    // Vì codtiktok có ~50 cột phí nhưng PosSheets chỉ map ~10 cột,
+    // các cột shipping unmapped (Phí VC thực tế, Chiết khấu VC nền tảng...)
+    // gây lệch khi cộng từng cột. Dùng derived đảm bảo chính xác 100%.
+    const derivedTotalCosts = revenueData.totalRevenue - reconciliationData.reconciledRevenue - reconciliationData.unreconciledRevenue;
+    const knownCosts = costsData.totalCosts;
+    const otherFee = Math.max(0, derivedTotalCosts - knownCosts);
+    
+    // Thêm phí ẩn vào breakdown
+    costsData.breakdown.otherFee = otherFee;
+    
+    if (otherFee > 0) {
+      console.log(`[TikTokFinanceProcessor] ⚠️ Phí ẩn phát hiện: ${otherFee.toLocaleString()} VND (từ cột codtiktok chưa map)`);
+    }
+    console.log(`[TikTokFinanceProcessor] Derived totalCosts: ${derivedTotalCosts.toLocaleString()} (known: ${knownCosts.toLocaleString()}, other: ${otherFee.toLocaleString()})`);
+    
+    // 6b. Tính chi tiết phí ẩn per-order (để xác minh)
+    const hiddenFeeData = this.calculateHiddenFeeOrders(revenueData.orders);
+    
+    // 7. Tiền quảng cáo (có filter date) - Bao gồm GVM
     const adData = {
       totalDeposit: advertisingData ? advertisingData.totalDeposit : 0,
       totalTax: advertisingData ? advertisingData.totalTax : 0,
@@ -219,14 +308,14 @@ class TikTokFinanceProcessor {
       gvmRecordCount: withdrawalData ? (withdrawalData.gvmRecordCount || 0) : 0
     };
 
-    // 7. Tiền rút trong kỳ (có filter date)
+    // 8. Tiền rút trong kỳ (có filter date)
     const withdrawnInPeriod = withdrawalData ? withdrawalData.periodWithdrawn : 0;
 
     const financeReport = {
       // Metrics cần filter theo date
       totalReceivedRevenue: revenueData.totalRevenue,
       totalReceivedOrders: revenueData.orderCount,
-      totalPlatformCosts: costsData.totalCosts,
+      totalPlatformCosts: derivedTotalCosts,
       reconciledOrdersCount: reconciliationData.reconciledCount,
       reconciledRevenue: reconciliationData.reconciledRevenue,
       unreconciledOrdersCount: reconciliationData.unreconciledCount,
@@ -241,6 +330,13 @@ class TikTokFinanceProcessor {
       
       // Chi tiết chi phí
       costBreakdown: costsData.breakdown,
+      
+      // Phí ẩn chi tiết (để xác minh)
+      hiddenFees: {
+        totalHiddenFee: hiddenFeeData.totalHiddenFee,
+        count: hiddenFeeData.count,
+        orders: hiddenFeeData.orders
+      },
       
       // Meta data
       dateRange: { startDate, endDate },

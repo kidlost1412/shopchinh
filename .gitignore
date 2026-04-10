@@ -68,3 +68,9 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# CSV data files (large, not for git)
+*.csv
+
+# Workspace files
+*.code-workspace
