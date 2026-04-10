@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, forwardRef } from 'react';
-import { Calendar, TrendingUp, TrendingDown, DollarSign, BarChart3, Search, FileDown, ChevronLeft, Eye, Wallet, CreditCard, CheckCircle, Clock, Megaphone, ArrowDownToLine, PieChart, Building2 } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, DollarSign, BarChart3, Search, FileDown, ChevronLeft, ChevronDown, ChevronUp, Eye, Wallet, CreditCard, CheckCircle, Clock, Megaphone, ArrowDownToLine, PieChart, Building2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { apiService } from '../services/api';
 import OrderModal from '../components/OrderModal';
@@ -163,6 +163,9 @@ const FinanceReport: React.FC = () => {
   
   // Order detail modal state - Only for order details
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  
+  // Hidden fee toggle state
+  const [showHiddenFees, setShowHiddenFees] = useState<boolean>(false);
   
   // Finance Date Range - Độc lập với Dashboard
   const [financeDateRange, setFinanceDateRange] = useState<{ startDate: string; endDate: string }>({ 
@@ -951,67 +954,6 @@ const FinanceReport: React.FC = () => {
             )}
 
 
-            {/* Hidden Fee Table - Bảng phí ẩn xác minh */}
-            {financeData.hiddenFees && financeData.hiddenFees.count > 0 && (
-              <div className="bg-white rounded-2xl border border-amber-200 shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 px-6 py-4 border-b border-amber-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <Eye className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-amber-800">Phí Ẩn Chi Tiết</h3>
-                        <p className="text-xs text-amber-600">
-                          {financeData.hiddenFees.count} đơn có phí ẩn · Tổng: {formatCurrency(financeData.hiddenFees.totalHiddenFee)}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                      Từ codtiktok chưa map
-                    </span>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-amber-50 text-amber-800">
-                        <th className="px-4 py-3 text-left font-semibold">#</th>
-                        <th className="px-4 py-3 text-left font-semibold">Mã đơn</th>
-                        <th className="px-4 py-3 text-right font-semibold">DT chưa trừ phí</th>
-                        <th className="px-4 py-3 text-right font-semibold">Phí đã biết</th>
-                        <th className="px-4 py-3 text-right font-semibold">Lẽ ra nhận</th>
-                        <th className="px-4 py-3 text-right font-semibold">Thực nhận</th>
-                        <th className="px-4 py-3 text-right font-semibold text-red-700">Phí ẩn</th>
-                        <th className="px-4 py-3 text-left font-semibold">Lý do</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {financeData.hiddenFees.orders.map((order, idx) => (
-                        <tr key={order.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'}>
-                          <td className="px-4 py-2.5 text-gray-500">{idx + 1}</td>
-                          <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{order.id}</td>
-                          <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(order.revenueBeforeFees)}</td>
-                          <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(order.knownFees)}</td>
-                          <td className="px-4 py-2.5 text-right text-blue-700 font-medium">{formatCurrency(order.expectedReceived)}</td>
-                          <td className="px-4 py-2.5 text-right text-green-700 font-medium">{formatCurrency(order.actualReceived)}</td>
-                          <td className="px-4 py-2.5 text-right text-red-600 font-bold">{formatCurrency(order.hiddenFee)}</td>
-                          <td className="px-4 py-2.5 text-xs text-gray-500 max-w-xs truncate" title={order.reason}>{order.reason}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="bg-amber-100 font-bold">
-                        <td colSpan={6} className="px-4 py-3 text-right text-amber-800">Tổng phí ẩn:</td>
-                        <td className="px-4 py-3 text-right text-red-700 text-lg">{formatCurrency(financeData.hiddenFees.totalHiddenFee)}</td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            )}
-
             {/* Row 2 - Secondary Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
@@ -1202,7 +1144,71 @@ const FinanceReport: React.FC = () => {
                   <p className="text-lg font-bold text-orange-600">{formatCurrency(financeData.costBreakdown.orderProcessingFee)}</p>
                   <p className="text-xs text-orange-500 mt-1">{formatPercentage(financeData.costBreakdown.orderProcessingFee, financeData.totalReceivedRevenue)}</p>
                 </div>
+                {financeData.hiddenFees && financeData.hiddenFees.count > 0 && (
+                <div 
+                  className="bg-amber-50 p-4 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors border border-amber-200"
+                  onClick={() => setShowHiddenFees(!showHiddenFees)}
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-gray-600 mb-1">Phí Ẩn</h4>
+                    {showHiddenFees ? <ChevronUp className="w-4 h-4 text-amber-600" /> : <ChevronDown className="w-4 h-4 text-amber-600" />}
+                  </div>
+                  <p className="text-lg font-bold text-amber-600">{formatCurrency(financeData.hiddenFees.totalHiddenFee)}</p>
+                  <p className="text-xs text-amber-500 mt-1">{financeData.hiddenFees.count} đơn có phí ẩn</p>
+                </div>
+                )}
               </div>
+
+              {/* Hidden Fee Table - Collapsible */}
+              {showHiddenFees && financeData.hiddenFees && financeData.hiddenFees.count > 0 && (
+                <div className="mt-6 rounded-xl border border-amber-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 px-6 py-3 border-b border-amber-200 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Eye className="w-4 h-4 text-amber-600" />
+                      <span className="text-sm font-bold text-amber-800">Phí Ẩn Chi Tiết</span>
+                      <span className="text-xs text-amber-600">· Tổng: {formatCurrency(financeData.hiddenFees.totalHiddenFee)}</span>
+                    </div>
+                    <button onClick={() => setShowHiddenFees(false)} className="text-xs text-amber-600 hover:text-amber-800">Đóng ✕</button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-amber-50 text-amber-800">
+                          <th className="px-4 py-3 text-left font-semibold">#</th>
+                          <th className="px-4 py-3 text-left font-semibold">Mã đơn</th>
+                          <th className="px-4 py-3 text-right font-semibold">DT chưa trừ phí</th>
+                          <th className="px-4 py-3 text-right font-semibold">Phí đã biết</th>
+                          <th className="px-4 py-3 text-right font-semibold">Lẽ ra nhận</th>
+                          <th className="px-4 py-3 text-right font-semibold">Thực nhận</th>
+                          <th className="px-4 py-3 text-right font-semibold text-red-700">Phí ẩn</th>
+                          <th className="px-4 py-3 text-left font-semibold">Lý do</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {financeData.hiddenFees.orders.map((order, idx) => (
+                          <tr key={order.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'}>
+                            <td className="px-4 py-2.5 text-gray-500">{idx + 1}</td>
+                            <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{order.id}</td>
+                            <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(order.revenueBeforeFees)}</td>
+                            <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(order.knownFees)}</td>
+                            <td className="px-4 py-2.5 text-right text-blue-700 font-medium">{formatCurrency(order.expectedReceived)}</td>
+                            <td className="px-4 py-2.5 text-right text-green-700 font-medium">{formatCurrency(order.actualReceived)}</td>
+                            <td className="px-4 py-2.5 text-right text-red-600 font-bold">{formatCurrency(order.hiddenFee)}</td>
+                            <td className="px-4 py-2.5 text-xs text-gray-500 max-w-xs truncate" title={order.reason}>{order.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-amber-100 font-bold">
+                          <td colSpan={6} className="px-4 py-3 text-right text-amber-800">Tổng phí ẩn:</td>
+                          <td className="px-4 py-3 text-right text-red-700 text-lg">{formatCurrency(financeData.hiddenFees.totalHiddenFee)}</td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>
