@@ -10,11 +10,12 @@ class DonaffProcessor {
       ORDER_ID: 'ID đơn hàng',                    // Cột A (1)
       PRODUCT_ID: 'ID sản phẩm',                  // Cột B (2)
       PRODUCT_NAME: 'Tên sản phẩm',               // Cột C (3)
-      SKU: 'Sku',                                 // Cột D (4)
+      SKU: 'ID SKU',                              // Cột D (4) - Đổi từ 'Sku' sang 'ID SKU'
       PRICE: 'Giá',                               // Cột G (7)
       PAYMENT_AMOUNT: 'Payment Amount',           // Cột H (8)
       CURRENCY: 'Đơn vị tiền tệ',                 // Cột I (9)
       QUANTITY: 'Số lượng',                       // Cột J (10)
+      FULL_RETURN_REFUND: 'Đã trả hàng hoặc hoàn tiền đầy đủ', // Cột mới (thay Trả hàng & Hoàn tiền)
       PAYMENT_METHOD: 'Phương thức thanh toán',   // Cột K (11)
       ORDER_STATUS: 'Trạng thái đơn hàng',        // Cột L (12)
       AFF_NAME: 'Tên người dùng nhà sáng tạo',    // Cột M (13)
@@ -34,15 +35,11 @@ class DonaffProcessor {
       AD_COMMISSION_ACTUAL: 'Thanh toán hoa hồng Quảng cáo cửa hàng thực tế',     // Cột AA (27) - HH QC thực tế (chỉ "Đã hoàn thành")
       CREATOR_BONUS_ESTIMATED: 'Thưởng đồng chi trả cho nhà sáng tạo ước tính',   // Cột AB (28)
       CREATOR_BONUS_ACTUAL: 'Thưởng đồng chi trả cho nhà sáng tạo thực tế',       // Cột AC (29)
-      RETURN_REFUND: 'Trả hàng & hoàn tiền',      // Cột AD (30)
-      REFUND: 'Hoàn tiền',                        // Cột AE (31)
-      CREATE_TIME: 'Thời gian đã tạo',            // Cột AF (32) - NGÀY LỌC CHÍNH
-      PAYMENT_TIME: 'Thời gian thanh toán',       // Cột AG (33)
-      READY_SHIP_TIME: 'Thời gian sẵn sàng vận chuyển', // Cột AH (34)
-      DELIVERY_TIME: 'Order Delivery Time',       // Cột AI (35)
-      COMPLETE_TIME: 'Thời gian hoàn thành đơn hàng',    // Cột AJ (36)
-      COMMISSION_PAID_TIME: 'Thời gian hoa hồng đã thanh toán', // Cột AK (37)
-      PLATFORM: 'Platform'                       // Cột AL (38)
+      CREATE_TIME: 'Thời gian đã tạo',            // Cột AC (29) - NGÀY LỌC CHÍNH
+      PAYMENT_TIME: 'Thời gian thanh toán',       // Cột AD (30)
+      DELIVERY_TIME: 'Order Delivery Time',       // Cột AE (31)
+      COMMISSION_PAID_TIME: 'Thời gian hoa hồng đã thanh toán', // Cột AF (32)
+      PLATFORM: 'Platform'                       // Cột AG (33)
     };
     
     // Column mapping sẽ được populate dynamically
@@ -51,6 +48,12 @@ class DonaffProcessor {
     
     // Status mapping cho AFF
     this.affStatusMapping = {
+      // Format mới TikTok 2024+
+      'Đã quyết toán': 'completed',
+      'Không đủ điều kiện': 'cancelled',
+      'Chờ xử lý': 'processing',
+      'Khách hàng chưa thanh toán': 'processing',
+      // Format cũ (backward compatible)
       'Đã hoàn thành': 'completed',
       'Đã hủy': 'cancelled', 
       'Đang xử lý': 'processing'
@@ -350,11 +353,11 @@ class DonaffProcessor {
       const standardCommissionEstimated = this.parseNumber(row[this.columnMapping.STANDARD_COMMISSION_ESTIMATED]) || 0; // HH tự nhiên ước tính
       const adCommissionEstimated = this.parseNumber(row[this.columnMapping.AD_COMMISSION_ESTIMATED]) || 0; // HH QC ước tính
       
-      // HH thực tế - CHỈ cho đơn "Đã hoàn thành"
+      // HH thực tế - CHỈ cho đơn "Đã hoàn thành" (cũ) hoặc "Đã quyết toán" (mới)
       let standardCommissionActual = 0;
       let adCommissionActual = 0;
       
-      if (orderStatus.trim() === 'Đã hoàn thành') {
+      if (orderStatus.trim() === 'Đã hoàn thành' || orderStatus.trim() === 'Đã quyết toán') {
         standardCommissionActual = this.parseNumber(row[this.columnMapping.STANDARD_COMMISSION_ACTUAL]) || 0;
         adCommissionActual = this.parseNumber(row[this.columnMapping.AD_COMMISSION_ACTUAL]) || 0;
       }
