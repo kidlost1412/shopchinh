@@ -70,6 +70,7 @@ interface FinanceData {
     tax: number;
     tiktokSubsidy: number;
     orderProcessingFee: number;
+    refundBonusFee?: number;
     otherFee?: number;
   };
   hiddenFees?: {
@@ -103,6 +104,7 @@ interface HiddenFeeOrder {
     tax: number;
     tiktokSubsidy: number;
     orderProcessingFee: number;
+    refundBonusFee?: number;
   };
   reason: string;
 }
@@ -375,6 +377,7 @@ const FinanceReport: React.FC = () => {
           'Thuế',
           'Phí TikTok Bù',
           'Phí Xử Lý Đơn Hàng',
+          'Phí DV Hoàn Tiền Thưởng',
           'Lợi nhuận thực'
         ]
       ];
@@ -389,7 +392,7 @@ const FinanceReport: React.FC = () => {
           'N/A';
         const totalFees = (order.affFee || 0) + (order.shippingFee || 0) + (order.shopShippingFee || 0) +
           (order.actualFee9 || order.platformFee || 0) + (order.xtraFee || 0) +
-          (order.flashSaleFee || 0) + (order.tax || 0) + (order.orderProcessingFee || 0);
+          (order.flashSaleFee || 0) + (order.tax || 0) + (order.orderProcessingFee || 0) + (order.refundBonusFee || 0);
         const profit = revenue - totalFees + (order.tiktokSubsidy || 0);
         excelData.push([
           order.id || order.orderId || order.orderNumber || '',
@@ -411,6 +414,7 @@ const FinanceReport: React.FC = () => {
           order.tax || 0,
           order.tiktokSubsidy || 0,
           order.orderProcessingFee || 0,
+          order.refundBonusFee || 0,
           profit
         ]);
       });
@@ -465,7 +469,8 @@ const FinanceReport: React.FC = () => {
       'flashSaleFee': 'Phí Flash Sale',
       'tax': 'Thuế',
       'tiktokSubsidy': 'Phí TikTok Bù',
-      'orderProcessingFee': 'Phí Xử Lý Đơn Hàng'
+      'orderProcessingFee': 'Phí Xử Lý Đơn Hàng',
+      'refundBonusFee': 'Phí DV Hoàn Tiền Thưởng'
     };
     return feeNames[feeType] || feeType;
   };
@@ -532,6 +537,8 @@ const FinanceReport: React.FC = () => {
         return order.tiktokSubsidy || 0;
       case 'orderProcessingFee':
         return order.orderProcessingFee || 0;
+      case 'refundBonusFee':
+        return order.refundBonusFee || 0;
       default:
         return order[feeType] || 0;
     }
@@ -1143,6 +1150,14 @@ const FinanceReport: React.FC = () => {
                   <h4 className="text-sm font-medium text-gray-600 mb-1">Phí Xử Lý Đơn Hàng</h4>
                   <p className="text-lg font-bold text-orange-600">{formatCurrency(financeData.costBreakdown.orderProcessingFee)}</p>
                   <p className="text-xs text-orange-500 mt-1">{formatPercentage(financeData.costBreakdown.orderProcessingFee, financeData.totalReceivedRevenue)}</p>
+                </div>
+                <div 
+                  className="bg-rose-50 p-4 rounded-lg cursor-pointer hover:bg-rose-100 transition-colors"
+                  onClick={() => handleFeeCardClick('refundBonusFee')}
+                >
+                  <h4 className="text-sm font-medium text-gray-600 mb-1">Phí DV Hoàn Tiền Thưởng</h4>
+                  <p className="text-lg font-bold text-rose-600">{formatCurrency(financeData.costBreakdown.refundBonusFee || 0)}</p>
+                  <p className="text-xs text-rose-500 mt-1">{formatPercentage(financeData.costBreakdown.refundBonusFee || 0, financeData.totalReceivedRevenue)}</p>
                 </div>
                 {financeData.hiddenFees && financeData.hiddenFees.count > 0 && (
                 <div 

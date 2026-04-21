@@ -84,7 +84,8 @@ class TikTokFinanceProcessor {
       flashSaleFee: Math.abs(receivedOrders.reduce((sum, order) => sum + (parseFloat(order.flashSaleFee) || 0), 0)),
       tax: Math.abs(receivedOrders.reduce((sum, order) => sum + (parseFloat(order.tax) || 0), 0)),
       tiktokSubsidy: Math.abs(receivedOrders.reduce((sum, order) => sum + (parseFloat(order.tiktokSubsidy) || 0), 0)),
-      orderProcessingFee: Math.abs(receivedOrders.reduce((sum, order) => sum + (parseFloat(order.orderProcessingFee) || 0), 0))
+      orderProcessingFee: Math.abs(receivedOrders.reduce((sum, order) => sum + (parseFloat(order.orderProcessingFee) || 0), 0)),
+      refundBonusFee: Math.abs(receivedOrders.reduce((sum, order) => sum + (parseFloat(order.refundBonusFee) || 0), 0))
     };
 
     // Debug: Log how many orders contribute to tax
@@ -105,7 +106,8 @@ class TikTokFinanceProcessor {
     const totalCosts = costBreakdown.affFee + costBreakdown.shippingFee + 
                       costBreakdown.shopShippingFee + costBreakdown.platformFee + 
                       costBreakdown.xtraFee + costBreakdown.flashSaleFee + 
-                      costBreakdown.tax + costBreakdown.orderProcessingFee - costBreakdown.tiktokSubsidy;
+                      costBreakdown.tax + costBreakdown.orderProcessingFee +
+                      costBreakdown.refundBonusFee - costBreakdown.tiktokSubsidy;
 
     console.log(`[TikTokFinanceProcessor] Total platform costs: ${totalCosts.toLocaleString()}`);
     
@@ -205,7 +207,8 @@ class TikTokFinanceProcessor {
                         Math.abs(parseFloat(order.xtraFee) || 0) +
                         Math.abs(parseFloat(order.flashSaleFee) || 0) +
                         Math.abs(parseFloat(order.tax) || 0) +
-                        Math.abs(parseFloat(order.orderProcessingFee) || 0) -
+                        Math.abs(parseFloat(order.orderProcessingFee) || 0) +
+                        Math.abs(parseFloat(order.refundBonusFee) || 0) -
                         Math.abs(parseFloat(order.tiktokSubsidy) || 0);
       
       // Doanh thu - phí đã biết = tiền lẽ ra phải nhận
@@ -234,7 +237,8 @@ class TikTokFinanceProcessor {
             flashSaleFee: Math.abs(parseFloat(order.flashSaleFee) || 0),
             tax: Math.abs(parseFloat(order.tax) || 0),
             tiktokSubsidy: Math.abs(parseFloat(order.tiktokSubsidy) || 0),
-            orderProcessingFee: Math.abs(parseFloat(order.orderProcessingFee) || 0)
+            orderProcessingFee: Math.abs(parseFloat(order.orderProcessingFee) || 0),
+            refundBonusFee: Math.abs(parseFloat(order.refundBonusFee) || 0)
           },
           reason: hiddenFee > 0 
             ? 'Phí VC thực tế + Chiết khấu VC nền tảng không triệt tiêu (codtiktok có cột phí chưa map sang PosSheets)' 

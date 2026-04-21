@@ -46,7 +46,8 @@ class DataProcessor {
       NOTES: 'ghi chú',
       TAX: 'thuế',
       TIKTOK_SUBSIDY: 'phí tiktok bù',
-      ORDER_PROCESSING_FEE: 'Phí xử lý đơn hàng'
+      ORDER_PROCESSING_FEE: 'Phí xử lý đơn hàng',
+      REFUND_BONUS_FEE: 'Phí dịch vụ hoàn tiền thưởng'
     };
     
     // Column mapping will be populated dynamically
@@ -360,6 +361,7 @@ class DataProcessor {
           tax: this.parseNumber(row[this.columnMapping.TAX]) || 0,
           tiktokSubsidy: this.parseNumber(row[this.columnMapping.TIKTOK_SUBSIDY]) || 0,
           orderProcessingFee: this.parseNumber(row[this.columnMapping.ORDER_PROCESSING_FEE]) || 0,
+          refundBonusFee: this.parseNumber(row[this.columnMapping.REFUND_BONUS_FEE]) || 0,
           products: [{
             name: row[this.columnMapping.PRODUCT_NAME] || '',
             quantity: this.parseNumber(row[this.columnMapping.QUANTITY]) || 0,

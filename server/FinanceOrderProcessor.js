@@ -88,6 +88,11 @@ class FinanceOrderProcessor {
           console.log(`[FinanceOrderProcessor] OrderProcessingFee check - Order ${order.id}: orderProcessingFee = "${order.orderProcessingFee}" -> parsed = ${feeValue} -> valid = ${hasValidFee}`);
           break;
           
+        case 'refundBonusFee':
+          feeValue = parseFloat(order.refundBonusFee) || 0;
+          hasValidFee = feeValue !== 0;
+          break;
+          
         default:
           return false;
       }
@@ -127,6 +132,7 @@ class FinanceOrderProcessor {
       case 'tax': return order.tax;
       case 'tiktokSubsidy': return order.tiktokSubsidy;
       case 'orderProcessingFee': return order.orderProcessingFee;
+      case 'refundBonusFee': return order.refundBonusFee;
       default: return null;
     }
   }
